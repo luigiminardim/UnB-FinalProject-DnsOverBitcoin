@@ -1,0 +1,20 @@
+@	    IN	SOA	ord.   luigiminardim.gmail.com. (
+			0          ; serial                     
+			21600      ; refresh after 6 hours                     
+			3600       ; retry after 1 hour                     
+			604800     ; expire after 1 week                     
+			86400 )    ; minimum TTL of 1 day      
+
+; @       IN	A	10.2.2.2 ; not working
+
+www	    IN	CNAME	server2
+
+server1	IN	A	10.0.0.0        
+server2	IN	A	10.0.0.1
+
+@       IN	MX	10  mail
+mail    IN	A   10.0.1.0
+       
+ftp	    IN	A	10.1.0.0
+	    IN	A	10.1.1.4	
+
