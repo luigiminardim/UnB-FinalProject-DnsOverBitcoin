@@ -1,20 +1,22 @@
-@	    IN	SOA	ord.   luigiminardim.gmail.com. (
-			0          ; serial                     
-			21600      ; refresh after 6 hours                     
-			3600       ; retry after 1 hour                     
-			604800     ; expire after 1 week                     
-			86400 )    ; minimum TTL of 1 day      
+@	IN	SOA	.	luigiminardim.gmail.com. (
+				0	; serial
+				21600       ; refresh after 6 hours
+				3600        ; retry after 1 hour
+				604800      ; expire after 1 week
+				86400 )     ; minimum TTL of 1 day
 
-; @       IN	A	10.2.2.2 ; not working
+internal	IN	CNAME	aname
 
-www	    IN	CNAME	server2
+ipv4name	IN	A	0.0.0.0
+			IN	A	0.0.0.1
 
-server1	IN	A	10.0.0.0        
-server2	IN	A	10.0.0.1
+ipv6name	IN	AAAA	::1
+			IN	AAAA	::2
 
-@       IN	MX	10  mail
-mail    IN	A   10.0.1.0
-       
-ftp	    IN	A	10.1.0.0
-	    IN	A	10.1.1.4	
+email	IN	MX	0	mail.example.com.
 
+text	IN	TXT	"bitcoin is the future"
+
+example		IN	CNAME	example.com.
+cloudfare	IN	CNAME	cloudfare.com.
+google 		IN	CNAME	google.com.

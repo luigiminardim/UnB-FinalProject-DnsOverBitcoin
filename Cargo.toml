@@ -3,7 +3,11 @@ name = "ordinals_dns"
 version = "0.0.0"
 edition = "2021"
 
+[[bin]]
+name = "ordinals_dns"
+path = "src/main.rs"
+
 [dependencies]
 async-trait = "0.1.81"
-hickory-server = "0.24.1"
+hickory-server = { version = "0.24.1", features = ["hickory-resolver", "hickory-recursor"] }
 tokio = { version = "1.39.3", features = ["macros", "rt-multi-thread", "net"] }
