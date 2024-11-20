@@ -10,6 +10,22 @@ DNS records from the Nostr network.
 ### DNS Server
 
 - [ ] Recursive resolve or forward non-Nostr domain names using traditional DNS;
+  - [ ] Model the DNS core logic;
+    - [ ] Model Name;
+    - [ ] Model Type;
+    - [ ] Model QType;
+    - [ ] Model Class;
+    - [ ] Model QClass;
+    - [ ] Model Resource Records
+      - [ ] A;
+      - [ ] AAAA;
+      - [ ] CNAME;
+      - [ ] NS;
+      - [ ] TXT;
+  - [ ] Listen to DNS requests;
+  - [ ] Resolve DNS requests;
+  - [ ] Return DNS responses;
+  - [ ] Forward DNS requests to other DNS servers;
 - [ ] Read Bitcoin UTXOs to find tokens mapping domain names to Nostr public keys;
 - [ ] Fetch DNS records from Nostr network using Nostr public keys;
 - [ ] Recursive resolve between Nostr domain names and Traditional domain names;

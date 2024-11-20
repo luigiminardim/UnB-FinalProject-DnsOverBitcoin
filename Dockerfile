@@ -7,6 +7,6 @@ RUN cargo build --release
 
 FROM debian:12.7
 WORKDIR /app
-COPY --from=builder /app/target/release/ordinals_dns ./ordinals_dns
+COPY --from=builder /app/target/release/ordinals_dns ./nostr-dns-server
 COPY data ./data
-CMD ["./ordinals_dns"]
+CMD ["./nostr-dns-server"]
