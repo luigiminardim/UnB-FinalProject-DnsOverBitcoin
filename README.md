@@ -12,15 +12,15 @@ DNS records from the Nostr network.
 - [ ] Recursive resolve or forward non-Nostr domain names using traditional DNS;
   - [ ] Model the DNS core logic;
     - [x] Model Name;
-    - [ ] Model Type;
-    - [ ] Model QType;
-    - [ ] Model Class;
-    - [ ] Model QClass;
+    - [x] Model Type;
+    - [x] Model Resource Record;
+    - [x] Model Class;
     - [ ] Model Resource Records
-      - [ ] A;
+      - [x] A;
       - [ ] AAAA;
       - [ ] CNAME;
       - [ ] NS;
+      - [ ] MX;
       - [ ] TXT;
   - [ ] Listen to DNS requests;
   - [ ] Resolve DNS requests;

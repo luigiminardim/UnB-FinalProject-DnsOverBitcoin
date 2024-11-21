@@ -4,7 +4,7 @@ use super::label::{FromStrErr as LabelFromStrErr, Label};
 
 const MAX_NAME_LEN: usize = 255;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Name(Vec<Label>);
 
 /// Represents a domain name definition error.

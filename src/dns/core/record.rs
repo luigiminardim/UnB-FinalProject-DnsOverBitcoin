@@ -1,0 +1,45 @@
+use super::{class::Class, data::Data, name::Name, record_type::RecordType};
+
+pub type Ttl = u32;
+
+pub struct Record {
+    name: Name,
+    class: Class,
+    ttl: Ttl,
+    data: Data,
+}
+
+impl Record {
+    pub fn new(name: Name, class: Class, ttl: u32, data: Data) -> Self {
+        Self {
+            name,
+            class,
+            ttl,
+            data,
+        }
+    }
+
+    pub fn record_type(&self) -> RecordType {
+        match self.data {
+            Data::A(_) => RecordType::A,
+            Data::Unknown(_) => RecordType::Unknown(0),
+            // Data::Cname(_) => Type::Cname,
+        }
+    }
+
+    pub fn name(&self) -> &Name {
+        &self.name
+    }
+
+    pub fn class(&self) -> Class {
+        self.class.clone()
+    }
+
+    pub fn ttl(&self) -> Ttl {
+        self.ttl
+    }
+
+    pub fn data(&self) -> &Data {
+        &self.data
+    }
+}

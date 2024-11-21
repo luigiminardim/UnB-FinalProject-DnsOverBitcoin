@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 /// A label is zero to 63 octets in length. The domain name of a node is the
 /// list of the labels
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Label(String);
 
 const MAX_LABEL_LEN: usize = 63;
@@ -44,12 +44,6 @@ impl FromStr for Label {
 impl ToString for Label {
     fn to_string(&self) -> String {
         self.0.clone()
-    }
-}
-
-impl PartialEq for Label {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
     }
 }
 
