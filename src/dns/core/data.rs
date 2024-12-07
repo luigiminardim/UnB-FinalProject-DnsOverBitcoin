@@ -1,5 +1,7 @@
 use std::net::Ipv4Addr;
 
+use super::record_type::RecordType;
+
 // use super::name::Name;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,5 +38,5 @@ impl AData {
 pub enum Data {
     A(AData),
     // Cname(CnameData),
-    Unknown(Vec<u8>),
+    Unknown(RecordType, Vec<u8>),
 }

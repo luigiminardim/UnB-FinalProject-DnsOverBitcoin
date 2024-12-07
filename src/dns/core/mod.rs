@@ -2,5 +2,8 @@ pub mod class;
 pub mod data;
 pub mod label;
 pub mod name;
+pub mod query_type;
+pub mod query_class;
+pub mod question;
 pub mod record;
 pub mod record_type;

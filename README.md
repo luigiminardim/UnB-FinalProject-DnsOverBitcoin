@@ -22,7 +22,7 @@ DNS records from the Nostr network.
       - [ ] NS;
       - [ ] MX;
       - [ ] TXT;
-  - [ ] Listen to DNS requests;
+  - [x] Listen to DNS requests;
   - [ ] Resolve DNS requests;
   - [ ] Return DNS responses;
   - [ ] Forward DNS requests to other DNS servers;

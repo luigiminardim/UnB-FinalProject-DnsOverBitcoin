@@ -2,6 +2,7 @@ use super::{class::Class, data::Data, name::Name, record_type::RecordType};
 
 pub type Ttl = u32;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Record {
     name: Name,
     class: Class,
@@ -20,9 +21,9 @@ impl Record {
     }
 
     pub fn record_type(&self) -> RecordType {
-        match self.data {
+        match &self.data {
             Data::A(_) => RecordType::A,
-            Data::Unknown(_) => RecordType::Unknown(0),
+            Data::Unknown(record_type, _) => record_type.clone(),
             // Data::Cname(_) => Type::Cname,
         }
     }
