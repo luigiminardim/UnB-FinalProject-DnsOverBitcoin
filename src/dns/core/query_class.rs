@@ -1,4 +1,4 @@
-use super::class::Class;
+use super::Class;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QueryClass {

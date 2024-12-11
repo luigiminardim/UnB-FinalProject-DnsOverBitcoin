@@ -26,11 +26,11 @@ impl Label {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum FromStrErr {
+pub enum LabelFromStrErr {
     LenLimit,
 }
 impl FromStr for Label {
-    type Err = FromStrErr;
+    type Err = LabelFromStrErr;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.len() > MAX_LABEL_LEN {
@@ -62,7 +62,7 @@ mod label_tests {
         assert_eq!(label.to_string(), "example");
 
         // a label with 64 characters is invalid
-        let label: Result<Label, FromStrErr> =
+        let label: Result<Label, LabelFromStrErr> =
             "a-64-character-long-label----------------------------is-too-long".parse();
         assert!(label.is_err());
     }

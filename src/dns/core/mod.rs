@@ -1,9 +1,26 @@
-pub mod class;
-pub mod data;
-pub mod label;
-pub mod name;
-pub mod query_type;
-pub mod query_class;
-pub mod question;
-pub mod record;
-pub mod record_type;
+mod class;
+pub use class::*;
+
+mod data;
+pub use data::*;
+
+mod label;
+pub use label::*;
+
+mod name;
+pub use name::*;
+
+mod query_class;
+pub use query_class::*;
+
+mod query_type;
+pub use query_type::*;
+
+mod question;
+pub use question::*;
+
+mod record;
+pub use record::*;
+
+mod record_type;
+pub use record_type::*;

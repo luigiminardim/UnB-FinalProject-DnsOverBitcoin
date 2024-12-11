@@ -1,4 +1,4 @@
-use super::{class::Class, data::Data, name::Name, record_type::RecordType};
+use super::{Class, Data, Name, RecordType};
 
 pub type Ttl = u32;
 

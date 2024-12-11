@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use super::label::{FromStrErr as LabelFromStrErr, Label};
+use super::{Label, LabelFromStrErr};
 
 const MAX_NAME_LEN: usize = 255;
 
@@ -60,13 +60,13 @@ impl Name {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum FromStrErr {
+pub enum NameFromStrErr {
     NameErr(NameErr),
     LabelFromStrErr(LabelFromStrErr),
 }
 
 impl FromStr for Name {
-    type Err = FromStrErr;
+    type Err = NameFromStrErr;
 
     fn from_str(str: &str) -> Result<Self, Self::Err> {
         // remove the trailing dot if it exists
@@ -81,8 +81,8 @@ impl FromStr for Name {
             .split('.')
             .map(|label_str| label_str.parse::<Label>())
             .collect::<Result<Vec<Label>, LabelFromStrErr>>()
-            .map_err(|err| FromStrErr::LabelFromStrErr(err))?;
-        Name::create(labels).map_err(|err| FromStrErr::NameErr(err))
+            .map_err(|err| NameFromStrErr::LabelFromStrErr(err))?;
+        Name::create(labels).map_err(|err| NameFromStrErr::NameErr(err))
     }
 }
 
@@ -179,11 +179,11 @@ mod tests {
         assert_eq!(domain.to_string(), "example.com.");
 
         // domains with more than 63 characters in a label are invalid
-        let domain: Result<Name, FromStrErr> =
+        let domain: Result<Name, NameFromStrErr> =
             "a-64-character-long-label----------------------------is-too-long".parse();
         assert_eq!(
             domain.unwrap_err(),
-            FromStrErr::LabelFromStrErr(LabelFromStrErr::LenLimit)
+            NameFromStrErr::LabelFromStrErr(LabelFromStrErr::LenLimit)
         );
     }
 

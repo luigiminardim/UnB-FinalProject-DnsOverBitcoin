@@ -1,4 +1,4 @@
-use super::record_type::RecordType;
+use super::RecordType;
 
 /// QTYPE fields appear in the question part of a query. QTYPES are a superset
 /// of TYPEs, hence all TYPEs are valid QTYPEs.

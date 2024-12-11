@@ -1,4 +1,4 @@
-use super::{name::Name, query_class::QueryClass, query_type::QueryType};
+use super::{Name, QueryClass, QueryType};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Question {

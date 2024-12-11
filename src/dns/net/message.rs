@@ -1,4 +1,4 @@
-use crate::dns::core::{question::Question, record::Record};
+use crate::dns::core::{Question, Record};
 
 type MessageId = u16;
 

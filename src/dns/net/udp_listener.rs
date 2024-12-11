@@ -1,15 +1,7 @@
 use std::{net::Ipv4Addr, str::FromStr};
 
 use crate::dns::core::{
-    class::Class,
-    data::{AData, Data},
-    label::Label,
-    name::Name,
-    query_class::QueryClass,
-    query_type::QueryType,
-    question::Question,
-    record::{Record, Ttl},
-    record_type::RecordType,
+    AData, Class, Data, Label, Name, QueryClass, QueryType, Question, Record, RecordType, Ttl,
 };
 
 use super::message::{Message, OpCode, ResponseCode};
@@ -32,7 +24,7 @@ impl UdpListener {
             .map_err(UdpListenerError::IoError)?;
         let mut buffer = [0; UDP_LENGTH_LIMIT];
         loop {
-            let (message_length, src_addr) = socket
+            let (message_length, _) = socket
                 .recv_from(&mut buffer)
                 .await
                 .map_err(UdpListenerError::IoError)?;
