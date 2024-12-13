@@ -1,4 +1,7 @@
-use crate::dns::core::{Question, Record};
+use crate::dns::{
+    core::{Question, Record},
+    handler::{HandlerError, QueryRequest, QueryResponse},
+};
 
 type MessageId = u16;
 
@@ -95,7 +98,7 @@ impl From<ResponseCode> for u8 {
 
 /// All communications inside of the domain protocol are carried in a single
 /// format called a message.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Message {
     /// This identifier is copied the corresponding reply and can be used by the
     /// requester to match up replies to outstanding queries.
@@ -137,10 +140,15 @@ pub struct Message {
     additional: Vec<Record>,
 }
 
-impl Default for Message {
-    fn default() -> Self {
+#[derive(Debug, PartialEq)]
+pub enum Request {
+    Query(QueryRequest),
+}
+
+impl Message {
+    pub fn new(id: MessageId) -> Self {
         Self {
-            id: 0,
+            id,
             is_response: false,
             opcode: OpCode::Query,
             is_authoritative_answer: false,
@@ -153,13 +161,6 @@ impl Default for Message {
             authorities: Vec::new(),
             additional: Vec::new(),
         }
-    }
-}
-
-impl Message {
-    pub fn set_id(mut self, id: MessageId) -> Self {
-        self.id = id;
-        self
     }
 
     pub fn id(&self) -> MessageId {
@@ -263,5 +264,84 @@ impl Message {
 
     pub fn additional(&self) -> &Vec<Record> {
         &self.additional
+    }
+
+    pub fn to_empty_response(&self) -> Self {
+        Self::new(self.id)
+            .set_opcode(self.opcode())
+            .set_is_response(true)
+            .set_recursion_desired(self.recursion_desired)
+    }
+
+    pub fn into_request(&self) -> Result<Request, Message> {
+        if self.is_response() {
+            Err(self
+                .to_empty_response()
+                .set_response_code(ResponseCode::FormatError))
+        } else if self.opcode() != OpCode::Query {
+            Err(self
+                .to_empty_response()
+                .set_response_code(ResponseCode::NotImplemented))
+        } else if let Some(question) = self.questions.first() {
+            let query_request = QueryRequest::new(question.clone());
+            Ok(Request::Query(query_request))
+        } else {
+            Err(self
+                .to_empty_response()
+                .set_response_code(ResponseCode::FormatError))
+        }
+    }
+
+    pub fn from_query_reponse(request_message: &Message, response: &QueryResponse) -> Self {
+        request_message
+            .to_empty_response()
+            .set_answers(response.answers().clone())
+            .set_authorities(response.authorities().clone())
+            .set_additional(response.additional().clone())
+    }
+
+    pub fn from_handler_error(id: MessageId, error: HandlerError) -> Self {
+        match error {
+            HandlerError::NotImplemented => Message::new(id)
+                .set_is_response(true)
+                .set_response_code(ResponseCode::NotImplemented),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::dns::core::{Class, Name, QueryClass, QueryType, RecordType};
+
+    use super::*;
+
+    #[test]
+    fn test_into_request() {
+        let question_mock = Question::new(
+            Name::root(),
+            QueryType::Type(RecordType::A),
+            QueryClass::Class(Class::IN),
+        );
+
+        // query request message
+        let message = Message::new(0)
+            .set_is_response(false)
+            .set_opcode(OpCode::Query)
+            .set_questions(vec![question_mock.clone()]);
+        let expected_query = QueryRequest::new(question_mock.clone());
+        assert_eq!(
+            message.into_request().unwrap(),
+            Request::Query(expected_query)
+        );
+
+        // response message
+        let message = Message::new(0)
+            .set_is_response(true)
+            .set_opcode(OpCode::Query)
+            .set_questions(vec![question_mock.clone()]);
+        let error_message = message.into_request().unwrap_err();
+        assert_eq!(error_message.response_code(), ResponseCode::FormatError);
+        assert_eq!(error_message.is_response(), true);
+        assert_eq!(error_message.opcode(), OpCode::Query);
     }
 }

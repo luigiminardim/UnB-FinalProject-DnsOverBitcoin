@@ -1,10 +1,12 @@
-use std::{net::Ipv4Addr, str::FromStr};
-
-use crate::dns::core::{
-    AData, Class, Data, Label, Name, QueryClass, QueryType, Question, Record, RecordType, Ttl,
-};
-
 use super::message::{Message, OpCode, ResponseCode};
+use crate::dns::{
+    core::{
+        AData, Class, Data, Label, Name, QueryClass, QueryType, Question, Record, RecordType, Ttl,
+    },
+    handler::Handler,
+    net::Request,
+};
+use std::{net::Ipv4Addr, str::FromStr};
 use tokio::net::UdpSocket;
 
 /// Messages carried by UDP are restricted to 512 bytes.
@@ -15,9 +17,17 @@ pub enum UdpListenerError {
     IoError(std::io::Error),
 }
 
-pub struct UdpListener {}
+pub struct UdpListener {
+    handler: Box<dyn Handler>,
+}
 
 impl UdpListener {
+    pub fn new(handler: impl Handler) -> Self {
+        UdpListener {
+            handler: Box::new(handler),
+        }
+    }
+
     pub async fn listen(self) -> Result<(), UdpListenerError> {
         let socket = UdpSocket::bind("127.0.0.1:1053")
             .await
@@ -30,8 +40,18 @@ impl UdpListener {
                 .map_err(UdpListenerError::IoError)?;
             let slice = &buffer[..message_length];
             let mut reader = SliceReader::new(&slice);
-            let message = self.decode_message(&mut reader).unwrap();
-            println!("{:?}", message);
+            let request_message = self.decode_message(&mut reader).unwrap();
+            let id = request_message.id();
+            let response_message = match request_message.into_request() {
+                Ok(Request::Query(query_request)) => {
+                    self.handler.handle_query(query_request).await.map_or_else(
+                        |error| Message::from_handler_error(id, error),
+                        |response| Message::from_query_reponse(&request_message, &response),
+                    )
+                }
+                Err(response_message) => response_message,
+            };
+            println!("Response: {:?}", response_message);
         }
     }
 
@@ -39,8 +59,7 @@ impl UdpListener {
         let bytes_0_1 = reader.read_u16()?;
         let byte2 = reader.read_u8()?;
         let byte3 = reader.read_u8()?;
-        let message = Message::default()
-            .set_id(bytes_0_1)
+        let message = Message::new(bytes_0_1)
             .set_is_response((byte2 & 0b1000_0000) != 0)
             .set_opcode(OpCode::from((byte2 & 0b0111_1000) >> 3))
             .set_is_authoritative_answer((byte2 & 0b0000_0100) != 0)
