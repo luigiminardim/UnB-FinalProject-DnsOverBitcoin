@@ -1,8 +1,8 @@
-mod message_buffer;
+mod datagram_reader_writer;
 
 use super::message::Message;
 use crate::dns::{handler::Handler, net::Request};
-use message_buffer::{DatagramReader, DatagramWriter};
+use datagram_reader_writer::{DatagramReader, DatagramWriter};
 use tokio::net::UdpSocket;
 
 /// Messages carried by UDP are restricted to 512 bytes.
