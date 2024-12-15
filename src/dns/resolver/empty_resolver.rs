@@ -12,7 +12,7 @@ impl EmptyResolver {
 
 #[async_trait]
 impl Resolver for EmptyResolver {
-    async fn handle_query(&self, _: QueryRequest) -> Result<QueryResponse, ResolverError> {
+    async fn handle_query(&self, _: &QueryRequest) -> Result<QueryResponse, ResolverError> {
         Ok(QueryResponse::default())
     }
 }

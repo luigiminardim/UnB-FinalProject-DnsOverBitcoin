@@ -60,5 +60,5 @@ pub enum ResolverError {
 
 #[async_trait]
 pub trait Resolver: 'static {
-    async fn handle_query(&self, request: QueryRequest) -> Result<QueryResponse, ResolverError>;
+    async fn handle_query(&self, request: &QueryRequest) -> Result<QueryResponse, ResolverError>;
 }

@@ -40,7 +40,7 @@ impl UdpListener {
             let id = request_message.id();
             let response_message = match request_message.into_request() {
                 Ok(Request::Query(query_request)) => {
-                    self.handler.handle_query(query_request).await.map_or_else(
+                    self.handler.handle_query(&query_request).await.map_or_else(
                         |error| Message::from_handler_error(id, error),
                         |response| Message::from_query_reponse(&request_message, &response),
                     )
