@@ -36,6 +36,10 @@ impl Name {
         Ok(Name(labels))
     }
 
+    pub fn labels(&self) -> &Vec<Label> {
+        &self.0
+    }
+
     /// Return the root (".") domain name
     pub fn root() -> Self {
         Name::create(vec![]).unwrap()
