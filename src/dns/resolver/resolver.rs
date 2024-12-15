@@ -54,11 +54,11 @@ impl QueryResponse {
     }
 }
 
-pub enum HandlerError {
+pub enum ResolverError {
     NotImplemented,
 }
 
 #[async_trait]
-pub trait Handler: 'static {
-    async fn handle_query(&self, request: QueryRequest) -> Result<QueryResponse, HandlerError>;
+pub trait Resolver: 'static {
+    async fn handle_query(&self, request: QueryRequest) -> Result<QueryResponse, ResolverError>;
 }

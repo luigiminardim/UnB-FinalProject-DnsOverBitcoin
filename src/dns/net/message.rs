@@ -1,6 +1,6 @@
 use crate::dns::{
     core::{Question, Record},
-    handler::{HandlerError, QueryRequest, QueryResponse},
+    resolver::{ResolverError, QueryRequest, QueryResponse},
 };
 
 type MessageId = u16;
@@ -300,9 +300,9 @@ impl Message {
             .set_additional(response.additional().clone())
     }
 
-    pub fn from_handler_error(id: MessageId, error: HandlerError) -> Self {
+    pub fn from_handler_error(id: MessageId, error: ResolverError) -> Self {
         match error {
-            HandlerError::NotImplemented => Message::new(id)
+            ResolverError::NotImplemented => Message::new(id)
                 .set_is_response(true)
                 .set_response_code(ResponseCode::NotImplemented),
         }

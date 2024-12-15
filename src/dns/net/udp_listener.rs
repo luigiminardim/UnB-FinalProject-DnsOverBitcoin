@@ -1,7 +1,7 @@
 mod datagram_reader_writer;
 
 use super::message::Message;
-use crate::dns::{handler::Handler, net::Request};
+use crate::dns::{resolver::Resolver, net::Request};
 use datagram_reader_writer::{DatagramReader, DatagramWriter};
 use tokio::net::UdpSocket;
 
@@ -14,11 +14,11 @@ pub enum UdpListenerError {
 }
 
 pub struct UdpListener {
-    handler: Box<dyn Handler>,
+    handler: Box<dyn Resolver>,
 }
 
 impl UdpListener {
-    pub fn new(handler: impl Handler) -> Self {
+    pub fn new(handler: impl Resolver) -> Self {
         UdpListener {
             handler: Box::new(handler),
         }

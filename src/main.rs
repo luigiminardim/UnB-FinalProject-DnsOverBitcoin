@@ -1,8 +1,8 @@
-use lib::dns::{handler::EmptyHandler, net::UdpListener};
+use lib::dns::{net::UdpListener, resolver::EmptyResolver};
 
 #[tokio::main]
 async fn main() {
-    let udp_listener = UdpListener::new(EmptyHandler::new());
+    let udp_listener = UdpListener::new(EmptyResolver::new());
     udp_listener
         .listen()
         .await

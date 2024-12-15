@@ -1,3 +1,3 @@
 pub mod core;
-pub mod handler;
+pub mod resolver;
 pub mod net;
