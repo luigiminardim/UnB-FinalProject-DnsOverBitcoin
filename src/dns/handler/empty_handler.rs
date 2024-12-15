@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use super::{Handler, HandlerError, QueryResponse};
+use super::{Handler, HandlerError, QueryRequest, QueryResponse};
 
 pub struct EmptyHandler {}
 
@@ -12,30 +12,7 @@ impl EmptyHandler {
 
 #[async_trait]
 impl Handler for EmptyHandler {
-    async fn handle_query(
-        &self,
-        request: super::QueryRequest,
-    ) -> Result<QueryResponse, HandlerError> {
-        dbg!(&request);
+    async fn handle_query(&self, _: QueryRequest) -> Result<QueryResponse, HandlerError> {
         Ok(QueryResponse::default())
-    }
-}
-
-struct ExceptionHandler {}
-
-impl ExceptionHandler {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-#[async_trait]
-impl Handler for ExceptionHandler {
-    async fn handle_query(
-        &self,
-        request: super::QueryRequest,
-    ) -> Result<QueryResponse, HandlerError> {
-        dbg!(&request);
-        Err(HandlerError::NotImplemented)
     }
 }
