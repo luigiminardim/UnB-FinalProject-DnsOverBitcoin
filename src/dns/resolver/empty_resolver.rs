@@ -1,6 +1,7 @@
-use async_trait::async_trait;
+use crate::dns::core::{Message, ResponseCode};
 
-use super::{Resolver, ResolverError, QueryRequest, QueryResponse};
+use super::Resolver;
+use async_trait::async_trait;
 
 pub struct EmptyResolver {}
 
@@ -12,7 +13,7 @@ impl EmptyResolver {
 
 #[async_trait]
 impl Resolver for EmptyResolver {
-    async fn handle_query(&self, _: &QueryRequest) -> Result<QueryResponse, ResolverError> {
-        Ok(QueryResponse::default())
+    async fn resolve(&self, request: &Message) -> Message {
+        request.into_response(ResponseCode::NoError)
     }
 }

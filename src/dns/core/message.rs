@@ -1,7 +1,4 @@
-use crate::dns::{
-    core::{Question, Record},
-    resolver::{ResolverError, QueryRequest, QueryResponse},
-};
+use crate::dns::core::{Question, Record};
 
 type MessageId = u16;
 
@@ -140,11 +137,6 @@ pub struct Message {
     additional: Vec<Record>,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum Request {
-    Query(QueryRequest),
-}
-
 impl Message {
     pub fn new(id: MessageId) -> Self {
         Self {
@@ -266,82 +258,11 @@ impl Message {
         &self.additional
     }
 
-    pub fn to_empty_response(&self) -> Self {
+    pub fn into_response(&self, response_code: ResponseCode) -> Self {
         Self::new(self.id)
-            .set_opcode(self.opcode())
             .set_is_response(true)
+            .set_opcode(self.opcode)
             .set_recursion_desired(self.recursion_desired)
-    }
-
-    pub fn into_request(&self) -> Result<Request, Message> {
-        if self.is_response() {
-            Err(self
-                .to_empty_response()
-                .set_response_code(ResponseCode::FormatError))
-        } else if self.opcode() != OpCode::Query {
-            Err(self
-                .to_empty_response()
-                .set_response_code(ResponseCode::NotImplemented))
-        } else if let Some(question) = self.questions.first() {
-            let query_request = QueryRequest::new(question.clone());
-            Ok(Request::Query(query_request))
-        } else {
-            Err(self
-                .to_empty_response()
-                .set_response_code(ResponseCode::FormatError))
-        }
-    }
-
-    pub fn from_query_reponse(request_message: &Message, response: &QueryResponse) -> Self {
-        request_message
-            .to_empty_response()
-            .set_answers(response.answers().clone())
-            .set_authorities(response.authorities().clone())
-            .set_additional(response.additional().clone())
-    }
-
-    pub fn from_handler_error(id: MessageId, error: ResolverError) -> Self {
-        match error {
-            ResolverError::NotImplemented => Message::new(id)
-                .set_is_response(true)
-                .set_response_code(ResponseCode::NotImplemented),
-        }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::dns::core::{Class, Name, QueryClass, QueryType, RecordType};
-
-    use super::*;
-
-    #[test]
-    fn test_into_request() {
-        let question_mock = Question::new(
-            Name::root(),
-            QueryType::Type(RecordType::A),
-            QueryClass::Class(Class::IN),
-        );
-
-        // query request message
-        let message = Message::new(0)
-            .set_is_response(false)
-            .set_opcode(OpCode::Query)
-            .set_questions(vec![question_mock.clone()]);
-        let expected_query = QueryRequest::new(question_mock.clone());
-        assert_eq!(
-            message.into_request().unwrap(),
-            Request::Query(expected_query)
-        );
-
-        // response message
-        let message = Message::new(0)
-            .set_is_response(true)
-            .set_opcode(OpCode::Query)
-            .set_questions(vec![question_mock.clone()]);
-        let error_message = message.into_request().unwrap_err();
-        assert_eq!(error_message.response_code(), ResponseCode::FormatError);
-        assert_eq!(error_message.is_response(), true);
-        assert_eq!(error_message.opcode(), OpCode::Query);
+            .set_response_code(response_code)
     }
 }

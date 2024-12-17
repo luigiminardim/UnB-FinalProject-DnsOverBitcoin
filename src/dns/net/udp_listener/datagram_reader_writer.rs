@@ -1,10 +1,8 @@
 use std::{net::Ipv4Addr, str::FromStr};
 
-use crate::dns::{
-    core::{
-        AData, Class, Data, Label, Name, QueryClass, QueryType, Question, Record, RecordType, Ttl,
-    },
-    net::{Message, OpCode, ResponseCode},
+use crate::dns::core::{
+    AData, Class, Data, Label, Message, Name, OpCode, QueryClass, QueryType, Question, Record,
+    RecordType, ResponseCode, Ttl,
 };
 
 pub(super) struct DatagramReader<'slice> {

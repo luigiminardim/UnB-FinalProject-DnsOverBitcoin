@@ -24,3 +24,6 @@ pub use record::*;
 
 mod record_type;
 pub use record_type::*;
+
+mod message;
+pub use message::*;
