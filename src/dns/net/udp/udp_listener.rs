@@ -1,7 +1,5 @@
-mod datagram_reader_writer;
-
+use super::{DatagramReader, DatagramWriter};
 use crate::dns::resolver::Resolver;
-use datagram_reader_writer::{DatagramReader, DatagramWriter};
 use tokio::net::UdpSocket;
 
 /// Messages carried by UDP are restricted to 512 bytes.

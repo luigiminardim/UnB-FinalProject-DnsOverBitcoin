@@ -5,7 +5,7 @@ use crate::dns::core::{
     RecordType, ResponseCode, Ttl,
 };
 
-pub(super) struct DatagramReader<'slice> {
+pub struct DatagramReader<'slice> {
     datagram: &'slice [u8],
     pos: usize,
 }
