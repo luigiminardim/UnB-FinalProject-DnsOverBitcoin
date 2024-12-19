@@ -24,7 +24,7 @@ DNS records from the Nostr network.
       - [ ] TXT;
   - [x] Listen to DNS requests;
   - [ ] Resolve DNS requests;
-  - [ ] Return DNS responses;
+  - [x] Return DNS responses;
   - [x] Forward DNS requests to other DNS servers;
     - [x] Compact mode;
 - [ ] Read Bitcoin UTXOs to find tokens mapping domain names to Nostr public keys;
