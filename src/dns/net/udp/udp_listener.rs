@@ -1,9 +1,6 @@
-use super::{DatagramReader, DatagramWriter};
+use super::{DatagramReader, DatagramWriter, UDP_LENGTH_LIMIT};
 use crate::dns::resolver::Resolver;
 use tokio::net::UdpSocket;
-
-/// Messages carried by UDP are restricted to 512 bytes.
-const UDP_LENGTH_LIMIT: usize = 512;
 
 #[derive(Debug)]
 pub enum UdpListenerError {

@@ -5,6 +5,9 @@ use crate::dns::core::{
     RecordType, ResponseCode, Ttl,
 };
 
+/// Messages carried by UDP are restricted to 512 bytes.
+pub const UDP_LENGTH_LIMIT: usize = 512;
+
 pub struct DatagramReader<'slice> {
     datagram: &'slice [u8],
     pos: usize,
@@ -20,9 +23,24 @@ impl<'slice> DatagramReader<'slice> {
     }
 
     fn read_u8(&mut self) -> Option<u8> {
-        let value = self.datagram.get(self.pos)?;
+        let value = self.datagram.get(self.pos);
+        let value = match value {
+            Some(value) => value,
+            None => {
+                dbg!("Failed to read u8");
+                return None;
+            }
+        };
         self.pos += 1;
         Some(value.clone())
+    }
+
+    fn position(&self) -> usize {
+        self.pos
+    }
+
+    fn set_position(&mut self, offset: usize) {
+        self.pos = offset;
     }
 }
 
@@ -70,22 +88,6 @@ trait ReadableWritable: Sized {
     fn write_all(vec: &Vec<Self>, buffer: &mut DatagramWriter) -> Option<()> {
         vec.iter().map(|value| value.write(buffer)).collect()
     }
-
-    fn read_while<F: FnMut(&Self) -> bool>(
-        buffer: &mut DatagramReader,
-        mut predicate: F,
-    ) -> Option<Vec<Self>> {
-        std::iter::repeat(0)
-            .map(|_| Self::read(buffer))
-            .take_while(|maybe_value: &Option<Self>| {
-                if let Some(value) = maybe_value {
-                    predicate(value)
-                } else {
-                    false
-                }
-            })
-            .collect()
-    }
 }
 
 impl ReadableWritable for u8 {
@@ -101,8 +103,8 @@ impl ReadableWritable for u8 {
 
 impl ReadableWritable for u16 {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
-        let u8_0: u8 = ReadableWritable::read(buffer)?;
-        let u8_1: u8 = ReadableWritable::read(buffer)?;
+        let u8_0 = u8::read(buffer)?;
+        let u8_1 = u8::read(buffer)?;
         let u16: u16 = ((u8_0 as u16) << 8) | (u8_1 as u16);
         Some(u16)
     }
@@ -118,12 +120,18 @@ impl ReadableWritable for u16 {
 
 impl ReadableWritable for Label {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
-        let length: u8 = ReadableWritable::read(buffer)?;
+        let length = u8::read(buffer)?;
         if length == 0 {
             Some(Label::null())
         } else {
-            let bytes: Vec<u8> = ReadableWritable::read_all(buffer, length)?;
-            let label_str = String::from_utf8(bytes).ok()?;
+            let bytes = u8::read_all(buffer, length)?;
+            let label_str = match String::from_utf8(bytes) {
+                Ok(label_str) => label_str,
+                Err(err) => {
+                    eprintln!("Failed to parse label: {:?}", err);
+                    return None;
+                }
+            };
             let label = Label::from_str(&label_str).ok()?;
             Some(label)
         }
@@ -140,22 +148,184 @@ impl ReadableWritable for Label {
     }
 }
 
+#[cfg(test)]
+mod test_label {
+    use super::*;
+
+    #[test]
+    fn test_read() {
+        let buffer = [3, b'f', b'o', b'o'];
+        let label = Label::read(&mut DatagramReader::new(&buffer)).unwrap();
+        assert_eq!(label, "foo".parse().unwrap());
+    }
+
+    #[test]
+    fn test_write() {
+        let label = Label::from_str("foo").unwrap();
+        let mut buffer = [0; UDP_LENGTH_LIMIT];
+        let mut writer = DatagramWriter::new(&mut buffer);
+        label.write(&mut writer).unwrap();
+        assert_eq!(writer.pos, 4);
+        assert_eq!(buffer[0..4], [3, b'f', b'o', b'o']);
+    }
+}
+
 impl ReadableWritable for Name {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
-        let labels: Vec<Label> =
-            ReadableWritable::read_while(buffer, |label: &Label| !label.is_null())?;
-        let name = Name::create(labels).ok()?;
-        Some(name)
+        let first_label_flag = {
+            let current_pos = buffer.position();
+            let flag = u8::read(buffer)? & 0b1100_0000;
+            buffer.set_position(current_pos);
+            flag
+        };
+        // invalid flag
+        if first_label_flag == 0b1000_0000 || first_label_flag == 0b0100_0000 {
+            eprintln!("Invalid label flag: {}", first_label_flag);
+            None
+        }
+        // compression flag
+        else if first_label_flag == 0b1100_0000 {
+            let current_pos = buffer.position();
+            let offset = (u16::read(buffer)? & 0b0011_1111_1111_1111) as usize;
+            let next_pos = buffer.position();
+            if offset >= current_pos {
+                eprintln!(
+                    "Invalid name compression offset({}) >= current position({})",
+                    offset, current_pos
+                );
+                return None;
+            }
+            buffer.set_position(offset as usize);
+            let super_name = Name::read(buffer)?;
+            buffer.set_position(next_pos);
+            Some(super_name)
+        } else {
+            let first_label = Label::read(buffer)?;
+            if first_label == Label::null() {
+                return Some(Name::root());
+            }
+            let super_name = Name::read(buffer)?;
+            let labels = [first_label]
+                .iter()
+                .chain(super_name.labels().iter())
+                .cloned()
+                .collect();
+            Name::create(labels).ok()
+        }
     }
 
     fn write(&self, buffer: &mut DatagramWriter) -> Option<()> {
-        ReadableWritable::write_all(self.labels(), buffer)
+        ReadableWritable::write_all(self.labels(), buffer)?;
+        ReadableWritable::write(&Label::null(), buffer)
+    }
+}
+
+#[cfg(test)]
+mod test_name {
+    use super::*;
+
+    #[test]
+    fn test_read_root() {
+        let datagram = [0];
+        let mut buffer = DatagramReader::new(&datagram);
+        let name = Name::read(&mut buffer).unwrap();
+        assert_eq!(buffer.pos, 1);
+        assert_eq!(name, Name::root());
+    }
+
+    #[test]
+    fn test_read_simple() {
+        let datagram = [
+            3, b'f', b'o', b'o', // pos = 0; "foo"
+            0,    // pos = 4; ""
+        ];
+        let mut buffer = DatagramReader::new(&datagram);
+        let name = Name::read(&mut buffer).unwrap();
+        assert_eq!(buffer.pos, 5);
+        assert_eq!(name, "foo".parse().unwrap());
+    }
+
+    #[test]
+    fn test_read_double() {
+        let buffer = [
+            3, b'f', b'o', b'o', // pos = 0; "foo"
+            3, b'b', b'a', b'r', // pos = 4; "bar"
+            0,    // pos = 8; ""
+        ];
+        let mut reader = DatagramReader::new(&buffer);
+        let name = Name::read(&mut reader).unwrap();
+        assert_eq!(reader.pos, 9);
+        assert_eq!(name, "foo.bar".parse().unwrap());
+    }
+
+    #[test]
+    fn test_read_compression() {
+        let buffer = [
+            // pos = 0; "foo."
+            3,
+            b'f',
+            b'o',
+            b'o',
+            0,
+            // pos = 5; "bar->foo."
+            3,
+            b'b',
+            b'a',
+            b'r',
+            0b1100_0000 | 0,
+            0,
+            // pos = 11; "zar->bar->foo."
+            3,
+            b'z',
+            b'a',
+            b'r',
+            0b1100_0000 | 0,
+            5,
+        ];
+        let mut buffer = DatagramReader::new(&buffer);
+        let foo_name = Name::read(&mut buffer).unwrap();
+        let bar_name = Name::read(&mut buffer).unwrap();
+        let zar_name = Name::read(&mut buffer).unwrap();
+        assert_eq!(buffer.pos, 17);
+        assert_eq!(foo_name, "foo.".parse().unwrap());
+        assert_eq!(bar_name, "bar.foo.".parse().unwrap());
+        assert_eq!(zar_name, "zar.bar.foo.".parse().unwrap());
+    }
+
+    #[test]
+    fn test_write_root() {
+        let name = Name::root();
+        let mut buffer = [0; UDP_LENGTH_LIMIT];
+        let mut writer = DatagramWriter::new(&mut buffer);
+        name.write(&mut writer).unwrap();
+        assert_eq!(writer.pos, 1);
+        assert_eq!(buffer[0], 0);
+    }
+
+    #[test]
+    fn test_write_simple() {
+        let name = "foo".parse::<Name>().unwrap();
+        let mut buffer = [0; UDP_LENGTH_LIMIT];
+        let mut writer = DatagramWriter::new(&mut buffer);
+        name.write(&mut writer).unwrap();
+        assert_eq!(writer.pos, 5);
+        assert_eq!(buffer[0..5], [3, b'f', b'o', b'o', 0]);
+    }
+
+    #[test]
+    fn test_write_double() {
+        let name = "foo.bar".parse::<Name>().unwrap();
+        let mut buffer = [0; UDP_LENGTH_LIMIT];
+        let mut writer = DatagramWriter::new(&mut buffer);
+        name.write(&mut writer).unwrap();
+        assert_eq!(writer.pos, 9);
+        assert_eq!(buffer[0..9], [3, b'f', b'o', b'o', 3, b'b', b'a', b'r', 0]);
     }
 }
 
 impl ReadableWritable for QueryType {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
-        let octect: u16 = ReadableWritable::read(buffer)?;
+        let octect = u16::read(buffer)?;
         let query_type = QueryType::from(octect);
         Some(query_type)
     }
@@ -166,9 +336,33 @@ impl ReadableWritable for QueryType {
     }
 }
 
+#[cfg(test)]
+mod test_query_type {
+    use super::*;
+
+    #[test]
+    fn test_read_type() {
+        let datagram = [0x00, 0x01];
+        let mut buffer = DatagramReader::new(&datagram);
+        let query_type = QueryType::read(&mut buffer).unwrap();
+        assert_eq!(query_type, QueryType::Type(RecordType::A));
+        assert_eq!(buffer.pos, 2);
+    }
+
+    #[test]
+    fn test_write_type() {
+        let query_type = QueryType::Type(RecordType::A);
+        let mut datagram = [0; UDP_LENGTH_LIMIT];
+        let mut buffer = DatagramWriter::new(&mut datagram);
+        query_type.write(&mut buffer).unwrap();
+        assert_eq!(buffer.pos, 2);
+        assert_eq!(datagram[0..2], [0x00, 0x01]);
+    }
+}
+
 impl ReadableWritable for QueryClass {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
-        let octect: u16 = ReadableWritable::read(buffer)?;
+        let octect = u16::read(buffer)?;
         let query_class = QueryClass::from(octect);
         Some(query_class)
     }
@@ -179,12 +373,36 @@ impl ReadableWritable for QueryClass {
     }
 }
 
+#[cfg(test)]
+mod test_query_class {
+    use super::*;
+
+    #[test]
+    fn test_read_class() {
+        let datagram = [0x00, 0x01];
+        let mut buffer = DatagramReader::new(&datagram);
+        let query_class = QueryClass::read(&mut buffer).unwrap();
+        assert_eq!(query_class, QueryClass::Class(Class::IN));
+        assert_eq!(buffer.pos, 2);
+    }
+
+    #[test]
+    fn test_write_class() {
+        let query_class = QueryClass::Class(Class::IN);
+        let mut datagram = [0; UDP_LENGTH_LIMIT];
+        let mut buffer = DatagramWriter::new(&mut datagram);
+        query_class.write(&mut buffer).unwrap();
+        assert_eq!(buffer.pos, 2);
+        assert_eq!(datagram[0..2], [0x00, 0x01]);
+    }
+}
+
 impl ReadableWritable for Question {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
-        let name: Name = ReadableWritable::read(buffer)?;
-        let query_type: QueryType = ReadableWritable::read(buffer)?;
-        let query_class: QueryClass = ReadableWritable::read(buffer)?;
-        let question: Question = Question::new(name, query_type, query_class);
+        let name = Name::read(buffer)?;
+        let query_type = QueryType::read(buffer)?;
+        let query_class = QueryClass::read(buffer)?;
+        let question = Question::new(name, query_type, query_class);
         Some(question)
     }
 
@@ -195,9 +413,50 @@ impl ReadableWritable for Question {
     }
 }
 
+#[cfg(test)]
+mod test_question {
+    use super::*;
+
+    #[test]
+    fn test_read_question() {
+        let datagram = [
+            0x03, 0x63, 0x6F, 0x6D, 0x00, // "com."
+            0x00, 0x01, // A
+            0x00, 0x01, // IN
+        ];
+        let mut buffer = DatagramReader::new(&datagram);
+        let question = Question::read(&mut buffer).unwrap();
+        assert_eq!(question.name(), &"com.".parse::<Name>().unwrap());
+        assert_eq!(question.query_type(), QueryType::Type(RecordType::A));
+        assert_eq!(question.query_class(), QueryClass::Class(Class::IN));
+        assert_eq!(buffer.pos, 9);
+    }
+
+    #[test]
+    fn test_write() {
+        let question = Question::new(
+            "com.".parse().unwrap(),
+            QueryType::Type(RecordType::A),
+            QueryClass::Class(Class::IN),
+        );
+        let mut datagram = [0; UDP_LENGTH_LIMIT];
+        let mut buffer = DatagramWriter::new(&mut datagram);
+        question.write(&mut buffer).unwrap();
+        assert_eq!(buffer.pos, 9);
+        assert_eq!(
+            datagram[0..9],
+            [
+                0x03, 0x63, 0x6F, 0x6D, 0x00, // "com."
+                0x00, 0x01, // A
+                0x00, 0x01 // IN
+            ]
+        );
+    }
+}
+
 impl ReadableWritable for RecordType {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
-        let bytes: u16 = ReadableWritable::read(buffer)?;
+        let bytes = u16::read(buffer)?;
         let record_type = RecordType::from(bytes);
         Some(record_type)
     }
@@ -210,7 +469,7 @@ impl ReadableWritable for RecordType {
 
 impl ReadableWritable for Class {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
-        let bytes: u16 = ReadableWritable::read(buffer)?;
+        let bytes = u16::read(buffer)?;
         let class = Class::from(bytes);
         Some(class)
     }
@@ -223,8 +482,8 @@ impl ReadableWritable for Class {
 
 impl ReadableWritable for u32 {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
-        let u16_1: u16 = ReadableWritable::read(buffer)?;
-        let u16_2: u16 = ReadableWritable::read(buffer)?;
+        let u16_1 = u16::read(buffer)?;
+        let u16_2 = u16::read(buffer)?;
         let u32 = ((u16_1 as u32) << 16) | (u16_2 as u32);
         Some(u32)
     }
@@ -239,10 +498,10 @@ impl ReadableWritable for u32 {
 
 impl ReadableWritable for Ipv4Addr {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
-        let octet_1: u8 = ReadableWritable::read(buffer)?;
-        let octet_2: u8 = ReadableWritable::read(buffer)?;
-        let octet_3: u8 = ReadableWritable::read(buffer)?;
-        let octet_4: u8 = ReadableWritable::read(buffer)?;
+        let octet_1 = u8::read(buffer)?;
+        let octet_2 = u8::read(buffer)?;
+        let octet_3 = u8::read(buffer)?;
+        let octet_4 = u8::read(buffer)?;
         let ipv4_addr = Ipv4Addr::new(octet_1, octet_2, octet_3, octet_4);
         Some(ipv4_addr)
     }
@@ -258,19 +517,19 @@ impl ReadableWritable for Ipv4Addr {
 
 impl ReadableWritable for Record {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
-        let name: Name = ReadableWritable::read(buffer)?;
-        let record_type: RecordType = ReadableWritable::read(buffer)?;
-        let class: Class = ReadableWritable::read(buffer)?;
-        let ttl: Ttl = ReadableWritable::read(buffer)?;
-        let data_length: u16 = ReadableWritable::read(buffer)?;
+        let name = Name::read(buffer)?;
+        let record_type = RecordType::read(buffer)?;
+        let class = Class::read(buffer)?;
+        let ttl = Ttl::read(buffer)?;
+        let data_length = u16::read(buffer)?;
         let data = match record_type {
             RecordType::A => {
-                let ipv4_addr: Ipv4Addr = ReadableWritable::read(buffer)?;
+                let ipv4_addr = Ipv4Addr::read(buffer)?;
                 let a_data = AData::new(ipv4_addr);
                 Some(Data::A(a_data))
             }
             RecordType::Unknown(type_value) => {
-                let bytes: Vec<u8> = ReadableWritable::read_all(buffer, data_length)?;
+                let bytes = u8::read_all(buffer, data_length)?;
                 let unknown_data = Data::Unknown(RecordType::Unknown(type_value), bytes);
                 Some(unknown_data)
             }
@@ -301,9 +560,9 @@ impl ReadableWritable for Record {
 
 impl ReadableWritable for Message {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
-        let bytes_0_1: u16 = ReadableWritable::read(buffer)?;
-        let byte2: u8 = ReadableWritable::read(buffer)?;
-        let byte3: u8 = ReadableWritable::read(buffer)?;
+        let bytes_0_1 = u16::read(buffer)?;
+        let byte2 = u8::read(buffer)?;
+        let byte3 = u8::read(buffer)?;
         let message = Message::new(bytes_0_1)
             .set_is_response((byte2 & 0b1000_0000) != 0)
             .set_opcode(OpCode::from((byte2 & 0b0111_1000) >> 3))
@@ -312,14 +571,14 @@ impl ReadableWritable for Message {
             .set_recursion_desired((byte2 & 0b0000_0001) != 0)
             .set_recursion_available((byte3 & 0b1000_0000) != 0)
             .set_response_code(ResponseCode::from(byte3 & 0b0000_1111));
-        let question_count: u16 = ReadableWritable::read(buffer)?;
-        let answer_count: u16 = ReadableWritable::read(buffer)?;
-        let authority_count: u16 = ReadableWritable::read(buffer)?;
-        let additional_count: u16 = ReadableWritable::read(buffer)?;
-        let questions: Vec<Question> = ReadableWritable::read_all(buffer, question_count)?;
-        let answers: Vec<Record> = ReadableWritable::read_all(buffer, answer_count)?;
-        let authorities: Vec<Record> = ReadableWritable::read_all(buffer, authority_count)?;
-        let additional: Vec<Record> = ReadableWritable::read_all(buffer, additional_count)?;
+        let question_count = u16::read(buffer)?;
+        let answer_count = u16::read(buffer)?;
+        let authority_count = u16::read(buffer)?;
+        let additional_count = u16::read(buffer)?;
+        let questions = Question::read_all(buffer, question_count)?;
+        let answers = Record::read_all(buffer, answer_count)?;
+        let authorities = Record::read_all(buffer, authority_count)?;
+        let additional = Record::read_all(buffer, additional_count)?;
         let message = message
             .set_questions(questions)
             .set_answers(answers)
@@ -366,5 +625,81 @@ impl ReadableWritable for Message {
         ReadableWritable::write_all(self.answers(), buffer)?;
         ReadableWritable::write_all(self.authorities(), buffer)?;
         ReadableWritable::write_all(self.additional(), buffer)
+    }
+}
+
+#[cfg(test)]
+mod test_message {
+    use super::*;
+
+    #[test]
+    fn test_read_header() {
+        let datagram = [
+            0x6A as u8, 0x20, // id = 0x6A20
+            0x81, // QR = 1, Opcode = 0, AA = 0, TC = 0, RD = 1
+            0x80, // RA = 1, Z = 0, RCODE = 0
+            0x00, 0x00, // QDCOUNT = 0
+            0x00, 0x00, // ANCOUNT = 0
+            0x00, 0x00, // NSCOUNT = 0
+            0x00, 0x00, // ARCOUNT = 0
+        ];
+        let mut buffer = DatagramReader::new(&datagram);
+        let message = Message::read(&mut buffer).unwrap();
+        assert_eq!(message.id(), 0x6A20);
+        assert_eq!(message.is_response(), true);
+        assert_eq!(message.opcode(), OpCode::Query);
+        assert_eq!(message.is_authoritative_answer(), false);
+        assert_eq!(message.is_truncation(), false);
+        assert_eq!(message.recursion_desired(), true);
+        assert_eq!(message.recursion_available(), true);
+        assert_eq!(message.response_code(), ResponseCode::NoError);
+        assert_eq!(message.questions().len(), 0);
+        assert_eq!(message.answers().len(), 0);
+        assert_eq!(message.authorities().len(), 0);
+        assert_eq!(message.additional().len(), 0);
+        assert_eq!(buffer.pos, 12);
+    }
+
+    #[test]
+    fn test_write() {
+        let message = Message::new(0x6A20)
+            .set_is_response(true)
+            .set_opcode(OpCode::Query)
+            .set_is_authoritative_answer(false)
+            .set_is_truncation(false)
+            .set_recursion_desired(true)
+            .set_recursion_available(true)
+            .set_response_code(ResponseCode::NoError);
+        let mut datagram = [0; UDP_LENGTH_LIMIT];
+        let mut buffer = DatagramWriter::new(&mut datagram);
+        message.write(&mut buffer).unwrap();
+        assert_eq!(buffer.pos, 12);
+        assert_eq!(
+            datagram[0..12],
+            [
+                0x6A as u8, 0x20, // id = 0x6A20
+                0x81, // QR = 1, Opcode = 0, AA = 0, TC = 0, RD = 1
+                0x80, // RA = 1, Z = 0, RCODE = 0
+                0x00, 0x00, // QDCOUNT = 0
+                0x00, 0x00, // ANCOUNT = 0
+                0x00, 0x00, // NSCOUNT = 0
+                0x00, 0x00, // ARCOUNT = 0
+            ]
+        );
+    }
+
+    #[test]
+    fn test_read() {
+        let buffer: [u8; 105] = [
+            106, 32, 129, 128, 0, 1, 0, 0, 0, 1, 0, 1, // id = 0x6A20
+            3, 99, 111, 109, 0, 0, 1, 0, 1, 192, 12, 0, 6, 0, 1, 0, 0, 3, 132, 0, 61, 1, 97, 12,
+            103, 116, 108, 100, 45, 115, 101, 114, 118, 101, 114, 115, 3, 110, 101, 116, 0, 5, 110,
+            115, 116, 108, 100, 12, 118, 101, 114, 105, 115, 105, 103, 110, 45, 103, 114, 115, 192,
+            12, 103, 98, 9, 231, 0, 0, 7, 8, 0, 0, 3, 132, 0, 9, 58, 128, 0, 0, 3, 132, 0, 0, 41,
+            4, 208, 0, 0, 0, 0, 0, 0,
+        ];
+        let message = Message::read(&mut DatagramReader::new(&buffer)).unwrap();
+        dbg!(&message);
+        assert_eq!(message.id(), 0x6A20);
     }
 }
