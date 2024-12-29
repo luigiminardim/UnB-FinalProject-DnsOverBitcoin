@@ -4,8 +4,8 @@ use std::{
 };
 
 use crate::dns::core::{
-    AData, AaaaData, Class, CnameData, Data, Label, Message, Name, NsData, OpCode, QueryClass,
-    QueryType, Question, Record, RecordType, ResponseCode, Ttl,
+    AData, AaaaData, Class, CnameData, Data, Label, Message, MxData, Name, NsData, OpCode,
+    QueryClass, QueryType, Question, Record, RecordType, ResponseCode, Ttl,
 };
 
 /// Messages carried by UDP are restricted to 512 bytes.
@@ -675,6 +675,54 @@ mod test_cname_data {
     }
 }
 
+impl ReadableWritable for MxData {
+    fn read(buffer: &mut DatagramReader) -> Option<Self> {
+        let preference = u16::read(buffer)?;
+        let exchange = Name::read(buffer)?;
+        let mx_data = MxData::new(preference, exchange);
+        Some(mx_data)
+    }
+
+    fn write(&self, buffer: &mut DatagramWriter) -> Option<()> {
+        self.preference().write(buffer)?;
+        self.exchange().write(buffer)
+    }
+}
+
+#[cfg(test)]
+mod test_mx_data {
+    use super::*;
+
+    #[test]
+    fn test_read() {
+        let datagram = [
+            0x00, 0x0a, // preference = 10
+            3, b'f', b'o', b'o', 0, // exchange = "foo."
+        ];
+        let mut buffer = DatagramReader::new(&datagram);
+        let mx_data = MxData::read(&mut buffer).unwrap();
+        assert_eq!(mx_data.preference(), 0x000a);
+        assert_eq!(mx_data.exchange(), &"foo.".parse::<Name>().unwrap());
+        assert_eq!(buffer.pos, 7);
+    }
+
+    #[test]
+    fn test_write() {
+        let mx_data = MxData::new(10, "foo.".parse().unwrap());
+        let mut datagram = [0; UDP_LENGTH_LIMIT];
+        let mut buffer = DatagramWriter::new(&mut datagram);
+        mx_data.write(&mut buffer).unwrap();
+        assert_eq!(buffer.pos, 7);
+        assert_eq!(
+            datagram[0..7],
+            [
+                0x00, 0x0a, // preference = 10
+                3, b'f', b'o', b'o', 0, // exchange = "foo."
+            ]
+        );
+    }
+}
+
 impl ReadableWritable for Record {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
         let name = Name::read(buffer)?;
@@ -687,6 +735,7 @@ impl ReadableWritable for Record {
             RecordType::NS => NsData::read(buffer).map(Data::Ns),
             RecordType::Cname => CnameData::read(buffer).map(Data::Cname),
             RecordType::Aaaa => AaaaData::read(buffer).map(Data::Aaaa),
+            RecordType::Mx => MxData::read(buffer).map(Data::Mx),
             RecordType::Unknown(type_value) => {
                 let bytes = u8::read_all(buffer, data_length)?;
                 let unknown_data = Data::Unknown(RecordType::Unknown(type_value), bytes);
@@ -710,6 +759,7 @@ impl ReadableWritable for Record {
             Data::Ns(ns_data) => ns_data.write(buffer),
             Data::Cname(cname_data) => cname_data.write(buffer),
             Data::Aaaa(aaaa_data) => aaaa_data.write(buffer),
+            Data::Mx(mx_data) => mx_data.write(buffer),
             Data::Unknown(_, bytes) => bytes
                 .iter()
                 .map(|byte: &u8| byte.write(buffer))

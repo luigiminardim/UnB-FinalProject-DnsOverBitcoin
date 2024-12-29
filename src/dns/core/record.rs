@@ -26,6 +26,7 @@ impl Record {
             Data::Ns(_) => RecordType::NS,
             Data::Cname(_) => RecordType::Cname,
             Data::Aaaa(_) => RecordType::Aaaa,
+            Data::Mx(_) => RecordType::Mx,
             Data::Unknown(record_type, _) => record_type.clone(),
         }
     }

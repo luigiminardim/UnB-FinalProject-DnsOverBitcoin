@@ -20,7 +20,7 @@ DNS records from the Nostr network.
       - [x] AAAA;
       - [x] CNAME;
       - [x] NS;
-      - [ ] MX;
+      - [x] MX;
       - [ ] TXT;
   - [x] Listen to DNS requests;
   - [ ] Resolve DNS requests;
