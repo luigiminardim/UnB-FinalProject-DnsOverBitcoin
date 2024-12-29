@@ -5,7 +5,7 @@ use std::{
 
 use crate::dns::core::{
     AData, AaaaData, Class, CnameData, Data, Label, Message, MxData, Name, NsData, OpCode,
-    QueryClass, QueryType, Question, Record, RecordType, ResponseCode, Ttl,
+    QueryClass, QueryType, Question, Record, RecordType, ResponseCode, Ttl, TxtData,
 };
 
 /// Messages carried by UDP are restricted to 512 bytes.
@@ -736,6 +736,13 @@ impl ReadableWritable for Record {
             RecordType::Cname => CnameData::read(buffer).map(Data::Cname),
             RecordType::Aaaa => AaaaData::read(buffer).map(Data::Aaaa),
             RecordType::Mx => MxData::read(buffer).map(Data::Mx),
+            RecordType::Txt => {
+                let bytes = u8::read_all(buffer, data_length)?;
+                let string = String::from_utf8(bytes).ok()?;
+                let txt_data = TxtData::new(string);
+                let data = Data::Txt(txt_data);
+                Some(data)
+            }
             RecordType::Unknown(type_value) => {
                 let bytes = u8::read_all(buffer, data_length)?;
                 let unknown_data = Data::Unknown(RecordType::Unknown(type_value), bytes);
@@ -760,6 +767,13 @@ impl ReadableWritable for Record {
             Data::Cname(cname_data) => cname_data.write(buffer),
             Data::Aaaa(aaaa_data) => aaaa_data.write(buffer),
             Data::Mx(mx_data) => mx_data.write(buffer),
+            Data::Txt(txt_data) => {
+                let bytes = txt_data.text().as_bytes();
+                bytes
+                    .iter()
+                    .map(|byte: &u8| byte.write(buffer))
+                    .collect::<Option<_>>()
+            }
             Data::Unknown(_, bytes) => bytes
                 .iter()
                 .map(|byte: &u8| byte.write(buffer))
@@ -777,6 +791,50 @@ impl ReadableWritable for Record {
 #[cfg(test)]
 mod test_record {
     use super::*;
+
+    #[test]
+    fn test_read_txt() {
+        let datagram = [
+            3, b'f', b'o', b'o', 0, // "foo."
+            0, 0x10, // TXT
+            0, 0x01, // IN
+            0, 0, 0, 0, // TTL
+            0, 3, // data length
+            b'b', b'a', b'r', // "bar"
+        ];
+        let mut buffer = DatagramReader::new(&datagram);
+        let record = Record::read(&mut buffer).unwrap();
+        assert_eq!(record.name(), &"foo.".parse::<Name>().unwrap());
+        assert_eq!(record.record_type(), RecordType::Txt);
+        assert_eq!(record.class(), Class::IN);
+        assert_eq!(record.ttl(), 0 as Ttl);
+        assert_eq!(record.data(), &Data::Txt(TxtData::new("bar".to_string())));
+    }
+
+    #[test]
+    fn test_write_txt() {
+        let record = Record::new(
+            "foo.".parse().unwrap(),
+            Class::IN,
+            0 as Ttl,
+            Data::Txt(TxtData::new("bar".to_string())),
+        );
+        let mut datagram = [0; UDP_LENGTH_LIMIT];
+        let mut buffer = DatagramWriter::new(&mut datagram);
+        record.write(&mut buffer).unwrap();
+        assert_eq!(buffer.pos, 18);
+        assert_eq!(
+            datagram[0..18],
+            [
+                3, b'f', b'o', b'o', 0, // "foo."
+                0, 0x10, // TXT
+                0, 0x01, // IN
+                0, 0, 0, 0, // TTL
+                0, 3, // data length
+                b'b', b'a', b'r', // "bar"
+            ]
+        );
+    }
 
     #[test]
     fn test_read_unknown() {

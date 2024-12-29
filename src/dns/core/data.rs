@@ -78,6 +78,21 @@ impl MxData {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TxtData {
+    text: String,
+}
+
+impl TxtData {
+    pub fn new(text: String) -> Self {
+        Self { text }
+    }
+
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AaaaData {
     address: Ipv6Addr,
 }
@@ -99,5 +114,6 @@ pub enum Data {
     Aaaa(AaaaData),
     Cname(CnameData),
     Mx(MxData),
+    Txt(TxtData),
     Unknown(RecordType, Vec<u8>),
 }

@@ -12,8 +12,12 @@ pub enum RecordType {
     /// Mail exchange record
     Mx,
 
+    /// Text record
+    Txt,
+
     /// IPv6 address record (RFC 3596)
     Aaaa,
+    
 
     Unknown(u16),
 }
@@ -25,6 +29,7 @@ impl From<u16> for RecordType {
             2 => RecordType::NS,
             5 => RecordType::Cname,
             15 => RecordType::Mx,
+            16 => RecordType::Txt,
             28 => RecordType::Aaaa,
             _ => RecordType::Unknown(value),
         }
@@ -38,6 +43,7 @@ impl From<RecordType> for u16 {
             RecordType::NS => 2,
             RecordType::Cname => 5,
             RecordType::Mx => 15,
+            RecordType::Txt => 16,
             RecordType::Aaaa => 28,
             RecordType::Unknown(value) => value,
         }
@@ -55,6 +61,7 @@ mod test_type {
         assert_eq!(RecordType::from(2), RecordType::NS);
         assert_eq!(RecordType::from(5), RecordType::Cname);
         assert_eq!(RecordType::from(15), RecordType::Mx);
+        assert_eq!(RecordType::from(16), RecordType::Txt);
         assert_eq!(RecordType::from(28), RecordType::Aaaa);
     }
 
@@ -65,6 +72,7 @@ mod test_type {
         assert_eq!(u16::from(RecordType::NS), 2);
         assert_eq!(u16::from(RecordType::Cname), 5);
         assert_eq!(u16::from(RecordType::Mx), 15);
+        assert_eq!(u16::from(RecordType::Txt), 16);
         assert_eq!(u16::from(RecordType::Aaaa), 28);
     }
 }

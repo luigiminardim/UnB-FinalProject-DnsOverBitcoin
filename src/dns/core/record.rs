@@ -27,6 +27,7 @@ impl Record {
             Data::Cname(_) => RecordType::Cname,
             Data::Aaaa(_) => RecordType::Aaaa,
             Data::Mx(_) => RecordType::Mx,
+            Data::Txt(_) => RecordType::Txt,
             Data::Unknown(record_type, _) => record_type.clone(),
         }
     }

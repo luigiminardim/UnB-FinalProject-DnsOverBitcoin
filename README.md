@@ -15,13 +15,13 @@ DNS records from the Nostr network.
     - [x] Model Type;
     - [x] Model Resource Record;
     - [x] Model Class;
-    - [ ] Model Resource Records
+    - [x] Model Resource Records
       - [x] A;
       - [x] AAAA;
       - [x] CNAME;
       - [x] NS;
       - [x] MX;
-      - [ ] TXT;
+      - [x] TXT;
   - [x] Listen to DNS requests;
   - [ ] Resolve DNS requests;
   - [x] Return DNS responses;
