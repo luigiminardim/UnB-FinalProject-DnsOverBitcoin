@@ -4,8 +4,8 @@ use std::{
 };
 
 use crate::dns::core::{
-    AData, AaaaData, Class, CnameData, Data, Label, Message, Name, OpCode, QueryClass, QueryType,
-    Question, Record, RecordType, ResponseCode, Ttl,
+    AData, AaaaData, Class, CnameData, Data, Label, Message, Name, NsData, OpCode, QueryClass,
+    QueryType, Question, Record, RecordType, ResponseCode, Ttl,
 };
 
 /// Messages carried by UDP are restricted to 512 bytes.
@@ -562,6 +562,18 @@ mod test_adata {
     }
 }
 
+impl ReadableWritable for NsData {
+    fn read(buffer: &mut DatagramReader) -> Option<Self> {
+        let name = Name::read(buffer)?;
+        let ns_data = NsData::new(name);
+        Some(ns_data)
+    }
+
+    fn write(&self, buffer: &mut DatagramWriter) -> Option<()> {
+        self.name_server().write(buffer)
+    }
+}
+
 impl ReadableWritable for AaaaData {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
         let segment_0 = u16::read(buffer)?;
@@ -672,6 +684,7 @@ impl ReadableWritable for Record {
         let data_length = u16::read(buffer)?;
         let data = match record_type {
             RecordType::A => AData::read(buffer).map(Data::A),
+            RecordType::NS => NsData::read(buffer).map(Data::Ns),
             RecordType::Cname => CnameData::read(buffer).map(Data::Cname),
             RecordType::Aaaa => AaaaData::read(buffer).map(Data::Aaaa),
             RecordType::Unknown(type_value) => {
@@ -694,6 +707,7 @@ impl ReadableWritable for Record {
         let data_start_pos = buffer.position();
         match self.data() {
             Data::A(a_data) => a_data.write(buffer),
+            Data::Ns(ns_data) => ns_data.write(buffer),
             Data::Cname(cname_data) => cname_data.write(buffer),
             Data::Aaaa(aaaa_data) => aaaa_data.write(buffer),
             Data::Unknown(_, bytes) => bytes

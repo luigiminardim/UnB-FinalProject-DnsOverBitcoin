@@ -20,6 +20,21 @@ impl AData {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NsData {
+    name_server: Name,
+}
+
+impl NsData {
+    pub fn new(name_server: Name) -> Self {
+        Self { name_server }
+    }
+
+    pub fn name_server(&self) -> &Name {
+        &self.name_server
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CnameData {
     cname: Name,
 }
@@ -52,6 +67,7 @@ impl AaaaData {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Data {
     A(AData),
+    Ns(NsData),
     Aaaa(AaaaData),
     Cname(CnameData),
     Unknown(RecordType, Vec<u8>),

@@ -3,6 +3,9 @@
 pub enum RecordType {
     A,
 
+    /// Name server record
+    NS,
+
     /// Canonical name record
     Cname,
 
@@ -16,6 +19,7 @@ impl From<u16> for RecordType {
     fn from(value: u16) -> Self {
         match value {
             1 => RecordType::A,
+            2 => RecordType::NS,
             5 => RecordType::Cname,
             28 => RecordType::Aaaa,
             _ => RecordType::Unknown(value),
@@ -27,6 +31,7 @@ impl From<RecordType> for u16 {
     fn from(value: RecordType) -> Self {
         match value {
             RecordType::A => 1,
+            RecordType::NS => 2,
             RecordType::Cname => 5,
             RecordType::Aaaa => 28,
             RecordType::Unknown(value) => value,
@@ -42,6 +47,7 @@ mod test_type {
     fn test_type_from_u16() {
         assert_eq!(RecordType::from(0), RecordType::Unknown(0));
         assert_eq!(RecordType::from(1), RecordType::A);
+        assert_eq!(RecordType::from(2), RecordType::NS);
         assert_eq!(RecordType::from(28), RecordType::Aaaa);
         assert_eq!(RecordType::from(5), RecordType::Cname);
         assert_eq!(RecordType::from(2), RecordType::Unknown(2));
@@ -51,6 +57,7 @@ mod test_type {
     fn test_type_into_u16() {
         assert_eq!(u16::from(RecordType::Unknown(0)), 0);
         assert_eq!(u16::from(RecordType::A), 1);
+        assert_eq!(u16::from(RecordType::NS), 2);
         assert_eq!(u16::from(RecordType::Aaaa), 28);
         assert_eq!(u16::from(RecordType::Cname), 5);
         assert_eq!(u16::from(RecordType::Unknown(2)), 2);
