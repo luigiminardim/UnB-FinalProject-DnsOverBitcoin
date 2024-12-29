@@ -1,8 +1,11 @@
-use std::{net::Ipv4Addr, str::FromStr};
+use std::{
+    net::{Ipv4Addr, Ipv6Addr},
+    str::FromStr,
+};
 
 use crate::dns::core::{
-    AData, Class, Data, Label, Message, Name, OpCode, QueryClass, QueryType, Question, Record,
-    RecordType, ResponseCode, Ttl,
+    AAAAData, AData, Class, Data, Label, Message, Name, OpCode, QueryClass, QueryType, Question,
+    Record, RecordType, ResponseCode, Ttl,
 };
 
 /// Messages carried by UDP are restricted to 512 bytes.
@@ -515,6 +518,107 @@ impl ReadableWritable for Ipv4Addr {
     }
 }
 
+impl ReadableWritable for AData {
+    fn read(buffer: &mut DatagramReader) -> Option<Self> {
+        let ipv4_addr = Ipv4Addr::read(buffer)?;
+        let a_data = AData::new(ipv4_addr);
+        Some(a_data)
+    }
+
+    fn write(&self, buffer: &mut DatagramWriter) -> Option<()> {
+        self.address().write(buffer)
+    }
+}
+
+#[cfg(test)]
+mod test_adata {
+    use super::*;
+
+    #[test]
+    fn test_read() {
+        let datagram = [192, 12, 0, 61];
+        let mut buffer = DatagramReader::new(&datagram);
+        let a_data = AData::read(&mut buffer).unwrap();
+        assert_eq!(a_data.address(), Ipv4Addr::new(192, 12, 0, 61));
+        assert_eq!(buffer.pos, 4);
+    }
+
+    #[test]
+    fn test_write() {
+        let a_data = AData::new(Ipv4Addr::new(192, 12, 0, 61));
+        let mut datagram = [0; UDP_LENGTH_LIMIT];
+        let mut buffer = DatagramWriter::new(&mut datagram);
+        a_data.write(&mut buffer).unwrap();
+        assert_eq!(buffer.pos, 4);
+        assert_eq!(datagram[0..4], [192, 12, 0, 61]);
+    }
+}
+
+impl ReadableWritable for AAAAData {
+    fn read(buffer: &mut DatagramReader) -> Option<Self> {
+        let segment_0 = u16::read(buffer)?;
+        let segment_1 = u16::read(buffer)?;
+        let segment_2 = u16::read(buffer)?;
+        let segment_3 = u16::read(buffer)?;
+        let segment_4 = u16::read(buffer)?;
+        let segment_5 = u16::read(buffer)?;
+        let segment_6 = u16::read(buffer)?;
+        let segment_7 = u16::read(buffer)?;
+        let ipv6_addr = Ipv6Addr::new(
+            segment_0, segment_1, segment_2, segment_3, segment_4, segment_5, segment_6, segment_7,
+        );
+        let aaaa_data = AAAAData::new(ipv6_addr);
+        Some(aaaa_data)
+    }
+
+    fn write(&self, buffer: &mut DatagramWriter) -> Option<()> {
+        let segments = self.address().segments();
+        segments
+            .iter()
+            .map(|segment| segment.write(buffer))
+            .collect::<Option<_>>()
+    }
+}
+
+#[cfg(test)]
+mod test_aaaa_data {
+
+    use super::*;
+
+    #[test]
+    fn test_read() {
+        let datagram = [
+            0x26, 0x06, 0x28, 0x00, 0x02, 0x1f, 0xcb, 0x07, 0x68, 0x20, 0x80, 0xda, 0xaf, 0x6b,
+            0x8b, 0x2c,
+        ];
+        let mut buffer = DatagramReader::new(&datagram);
+        let aaaa_data = AAAAData::read(&mut buffer).unwrap();
+        assert_eq!(
+            aaaa_data.address(),
+            Ipv6Addr::new(0x2606, 0x2800, 0x021f, 0xcb07, 0x6820, 0x80da, 0xaf6b, 0x8b2c)
+        );
+        assert_eq!(buffer.pos, 16);
+    }
+
+    #[test]
+    fn test_write() {
+        let aaaa_data = AAAAData::new(Ipv6Addr::new(
+            0x2606, 0x2800, 0x021f, 0xcb07, 0x6820, 0x80da, 0xaf6b, 0x8b2c,
+        ));
+        let mut datagram = [0; UDP_LENGTH_LIMIT];
+        let mut buffer = DatagramWriter::new(&mut datagram);
+        aaaa_data.write(&mut buffer).unwrap();
+        assert_eq!(buffer.pos, 16);
+        assert_eq!(
+            datagram[0..16],
+            [
+                0x26, 0x06, 0x28, 0x00, 0x02, 0x1f, 0xcb, 0x07, 0x68, 0x20, 0x80, 0xda, 0xaf, 0x6b,
+                0x8b, 0x2c,
+            ]
+        );
+    }
+}
+
 impl ReadableWritable for Record {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
         let name = Name::read(buffer)?;
@@ -523,11 +627,8 @@ impl ReadableWritable for Record {
         let ttl = Ttl::read(buffer)?;
         let data_length = u16::read(buffer)?;
         let data = match record_type {
-            RecordType::A => {
-                let ipv4_addr = Ipv4Addr::read(buffer)?;
-                let a_data = AData::new(ipv4_addr);
-                Some(Data::A(a_data))
-            }
+            RecordType::A => AData::read(buffer).map(Data::A),
+            RecordType::AAAA => AAAAData::read(buffer).map(Data::AAAA),
             RecordType::Unknown(type_value) => {
                 let bytes = u8::read_all(buffer, data_length)?;
                 let unknown_data = Data::Unknown(RecordType::Unknown(type_value), bytes);
@@ -544,17 +645,71 @@ impl ReadableWritable for Record {
         self.ttl().write(buffer)?;
         let data_length: u16 = match self.data() {
             Data::A(_) => 4,
+            Data::AAAA(_) => 16,
             Data::Unknown(_, bytes) => bytes.len() as u16,
         };
         data_length.write(buffer)?;
         match self.data() {
-            Data::A(a_data) => a_data.address().write(buffer),
+            Data::A(a_data) => a_data.write(buffer),
+            Data::AAAA(aaaa_data) => aaaa_data.write(buffer),
             Data::Unknown(_, bytes) => bytes
                 .iter()
                 .map(|byte: &u8| byte.write(buffer))
                 .collect::<Option<_>>(),
         }?;
         Some(())
+    }
+}
+
+#[cfg(test)]
+mod test_record {
+    use super::*;
+
+    #[test]
+    fn test_read_unknown() {
+        let datagram = [
+            3, b'f', b'o', b'o', 0, // "foo."
+            0, 0x03, // MD
+            0, 0x01, // IN
+            0, 0, 0, 0, // TTL
+            0, 5, // data length
+            3, b'b', b'a', b'r', 0, // "bar."
+        ];
+        let mut buffer = DatagramReader::new(&datagram);
+        let record = Record::read(&mut buffer).unwrap();
+        assert_eq!(record.name(), &"foo.".parse::<Name>().unwrap());
+        assert_eq!(record.record_type(), RecordType::Unknown(0x03));
+        assert_eq!(record.class(), Class::IN);
+        assert_eq!(record.ttl(), 0 as Ttl);
+        assert_eq!(
+            record.data(),
+            &Data::Unknown(RecordType::Unknown(0x03), vec![3, b'b', b'a', b'r', 0])
+        );
+    }
+
+    #[test]
+    fn test_write_unknown() {
+        let record = Record::new(
+            "foo.".parse().unwrap(),
+            Class::IN,
+            0 as Ttl,
+            Data::Unknown(RecordType::Unknown(0x03), vec![3, b'b', b'a', b'r', 0]),
+        );
+        let mut datagram = [0; UDP_LENGTH_LIMIT];
+        let mut buffer = DatagramWriter::new(&mut datagram);
+        record.write(&mut buffer).unwrap();
+        assert_eq!(buffer.pos, 20);
+        assert_eq!(
+            datagram[0..20],
+            [
+                3, b'f', b'o', b'o', 0, // "foo."
+                0, 0x03, // MD
+                0, 0x01, // IN
+                0, 0, 0, 0, // TTL
+                0, 5, // data length
+                3, b'b', b'a', b'r', 0, // "bar."
+            ]
+        );
     }
 }
 

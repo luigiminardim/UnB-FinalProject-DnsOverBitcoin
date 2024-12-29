@@ -23,6 +23,7 @@ impl Record {
     pub fn record_type(&self) -> RecordType {
         match &self.data {
             Data::A(_) => RecordType::A,
+            Data::AAAA(_) => RecordType::AAAA,
             Data::Unknown(record_type, _) => record_type.clone(),
             // Data::Cname(_) => Type::Cname,
         }

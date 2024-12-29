@@ -1,4 +1,4 @@
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, Ipv6Addr};
 
 use super::record_type::RecordType;
 
@@ -15,6 +15,21 @@ impl AData {
     }
 
     pub fn address(&self) -> Ipv4Addr {
+        self.address
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AAAAData {
+    address: Ipv6Addr,
+}
+
+impl AAAAData {
+    pub fn new(address: Ipv6Addr) -> Self {
+        Self { address }
+    }
+
+    pub fn address(&self) -> Ipv6Addr {
         self.address
     }
 }
@@ -37,6 +52,7 @@ impl AData {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Data {
     A(AData),
+    AAAA(AAAAData),
     // Cname(CnameData),
     Unknown(RecordType, Vec<u8>),
 }

@@ -17,7 +17,7 @@ DNS records from the Nostr network.
     - [x] Model Class;
     - [ ] Model Resource Records
       - [x] A;
-      - [ ] AAAA;
+      - [x] AAAA;
       - [ ] CNAME;
       - [ ] NS;
       - [ ] MX;
