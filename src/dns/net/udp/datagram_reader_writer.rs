@@ -4,8 +4,8 @@ use std::{
 };
 
 use crate::dns::core::{
-    AAAAData, AData, Class, Data, Label, Message, Name, OpCode, QueryClass, QueryType, Question,
-    Record, RecordType, ResponseCode, Ttl,
+    AData, AaaaData, Class, CnameData, Data, Label, Message, Name, OpCode, QueryClass, QueryType,
+    Question, Record, RecordType, ResponseCode, Ttl,
 };
 
 /// Messages carried by UDP are restricted to 512 bytes.
@@ -73,6 +73,14 @@ impl<'slice> DatagramWriter<'slice> {
         *slice = value;
         self.pos += 1;
         Some(())
+    }
+
+    fn position(&self) -> usize {
+        self.pos
+    }
+
+    fn set_position(&mut self, offset: usize) {
+        self.pos = offset;
     }
 }
 
@@ -554,7 +562,7 @@ mod test_adata {
     }
 }
 
-impl ReadableWritable for AAAAData {
+impl ReadableWritable for AaaaData {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
         let segment_0 = u16::read(buffer)?;
         let segment_1 = u16::read(buffer)?;
@@ -567,7 +575,7 @@ impl ReadableWritable for AAAAData {
         let ipv6_addr = Ipv6Addr::new(
             segment_0, segment_1, segment_2, segment_3, segment_4, segment_5, segment_6, segment_7,
         );
-        let aaaa_data = AAAAData::new(ipv6_addr);
+        let aaaa_data = AaaaData::new(ipv6_addr);
         Some(aaaa_data)
     }
 
@@ -592,7 +600,7 @@ mod test_aaaa_data {
             0x8b, 0x2c,
         ];
         let mut buffer = DatagramReader::new(&datagram);
-        let aaaa_data = AAAAData::read(&mut buffer).unwrap();
+        let aaaa_data = AaaaData::read(&mut buffer).unwrap();
         assert_eq!(
             aaaa_data.address(),
             Ipv6Addr::new(0x2606, 0x2800, 0x021f, 0xcb07, 0x6820, 0x80da, 0xaf6b, 0x8b2c)
@@ -602,7 +610,7 @@ mod test_aaaa_data {
 
     #[test]
     fn test_write() {
-        let aaaa_data = AAAAData::new(Ipv6Addr::new(
+        let aaaa_data = AaaaData::new(Ipv6Addr::new(
             0x2606, 0x2800, 0x021f, 0xcb07, 0x6820, 0x80da, 0xaf6b, 0x8b2c,
         ));
         let mut datagram = [0; UDP_LENGTH_LIMIT];
@@ -619,6 +627,42 @@ mod test_aaaa_data {
     }
 }
 
+impl ReadableWritable for CnameData {
+    fn read(buffer: &mut DatagramReader) -> Option<Self> {
+        let name = Name::read(buffer)?;
+        let cname_data = CnameData::new(name);
+        Some(cname_data)
+    }
+
+    fn write(&self, buffer: &mut DatagramWriter) -> Option<()> {
+        self.cname().write(buffer)
+    }
+}
+
+#[cfg(test)]
+mod test_cname_data {
+    use super::*;
+
+    #[test]
+    fn test_read() {
+        let datagram = [3, b'f', b'o', b'o', 0];
+        let mut buffer = DatagramReader::new(&datagram);
+        let cname_data = CnameData::read(&mut buffer).unwrap();
+        assert_eq!(cname_data.cname(), &"foo.".parse::<Name>().unwrap());
+        assert_eq!(buffer.pos, 5);
+    }
+
+    #[test]
+    fn test_write() {
+        let cname_data = CnameData::new("foo.".parse().unwrap());
+        let mut datagram = [0; UDP_LENGTH_LIMIT];
+        let mut buffer = DatagramWriter::new(&mut datagram);
+        cname_data.write(&mut buffer).unwrap();
+        assert_eq!(buffer.pos, 5);
+        assert_eq!(datagram[0..5], [3, b'f', b'o', b'o', 0]);
+    }
+}
+
 impl ReadableWritable for Record {
     fn read(buffer: &mut DatagramReader) -> Option<Self> {
         let name = Name::read(buffer)?;
@@ -628,7 +672,8 @@ impl ReadableWritable for Record {
         let data_length = u16::read(buffer)?;
         let data = match record_type {
             RecordType::A => AData::read(buffer).map(Data::A),
-            RecordType::AAAA => AAAAData::read(buffer).map(Data::AAAA),
+            RecordType::Cname => CnameData::read(buffer).map(Data::Cname),
+            RecordType::Aaaa => AaaaData::read(buffer).map(Data::Aaaa),
             RecordType::Unknown(type_value) => {
                 let bytes = u8::read_all(buffer, data_length)?;
                 let unknown_data = Data::Unknown(RecordType::Unknown(type_value), bytes);
@@ -638,25 +683,29 @@ impl ReadableWritable for Record {
         Some(Record::new(name, class, ttl, data))
     }
 
-    fn write(&self, buffer: &mut DatagramWriter) -> Option<()> {
+    fn write(&self, mut buffer: &mut DatagramWriter) -> Option<()> {
         self.name().write(buffer)?;
         self.record_type().write(buffer)?;
         self.class().write(buffer)?;
         self.ttl().write(buffer)?;
-        let data_length: u16 = match self.data() {
-            Data::A(_) => 4,
-            Data::AAAA(_) => 16,
-            Data::Unknown(_, bytes) => bytes.len() as u16,
-        };
-        data_length.write(buffer)?;
+        let data_length_pos = buffer.position();
+        // write data length as 0 for now
+        u16::write(&0, buffer)?;
+        let data_start_pos = buffer.position();
         match self.data() {
             Data::A(a_data) => a_data.write(buffer),
-            Data::AAAA(aaaa_data) => aaaa_data.write(buffer),
+            Data::Cname(cname_data) => cname_data.write(buffer),
+            Data::Aaaa(aaaa_data) => aaaa_data.write(buffer),
             Data::Unknown(_, bytes) => bytes
                 .iter()
                 .map(|byte: &u8| byte.write(buffer))
                 .collect::<Option<_>>(),
         }?;
+        let data_end_pos = buffer.position();
+        let data_length = (data_end_pos - data_start_pos) as u16;
+        buffer.set_position(data_length_pos);
+        data_length.write(&mut buffer)?;
+        buffer.set_position(data_end_pos);
         Some(())
     }
 }

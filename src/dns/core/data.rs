@@ -1,6 +1,6 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-use super::record_type::RecordType;
+use super::{record_type::RecordType, Name};
 
 // use super::name::Name;
 
@@ -20,11 +20,26 @@ impl AData {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AAAAData {
+pub struct CnameData {
+    cname: Name,
+}
+
+impl CnameData {
+    pub fn new(name: Name) -> Self {
+        Self { cname: name }
+    }
+
+    pub fn cname(&self) -> &Name {
+        &self.cname
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AaaaData {
     address: Ipv6Addr,
 }
 
-impl AAAAData {
+impl AaaaData {
     pub fn new(address: Ipv6Addr) -> Self {
         Self { address }
     }
@@ -34,25 +49,10 @@ impl AAAAData {
     }
 }
 
-// #[derive(Debug, Clone, PartialEq, Eq)]
-// pub struct CnameData {
-//     cname: Name,
-// }
-
-// impl CnameData {
-//     pub fn new(name: Name) -> Self {
-//         Self { cname: name }
-//     }
-
-//     pub fn cname(&self) -> &Name {
-//         &self.cname
-//     }
-// }
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Data {
     A(AData),
-    AAAA(AAAAData),
-    // Cname(CnameData),
+    Aaaa(AaaaData),
+    Cname(CnameData),
     Unknown(RecordType, Vec<u8>),
 }
