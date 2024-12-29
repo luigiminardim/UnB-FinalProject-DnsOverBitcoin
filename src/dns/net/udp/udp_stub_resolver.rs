@@ -44,7 +44,6 @@ impl Resolver for UdpStubResolver {
                 return request.into_response(ResponseCode::ServerFailure);
             }
             Ok((response_datagram_length, _)) => {
-                dbg!(&response_buffer[..response_datagram_length]);
                 match DatagramReader::new(&response_buffer[..response_datagram_length])
                     .read_message()
                 {

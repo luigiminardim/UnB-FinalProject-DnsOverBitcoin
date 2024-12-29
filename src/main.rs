@@ -14,7 +14,7 @@ async fn main() {
     udp_listener
         .listen()
         .await
-        .map_err(|e| {
+        .inspect_err(|e| {
             eprintln!("Error: {:?}", e);
         })
         .unwrap();

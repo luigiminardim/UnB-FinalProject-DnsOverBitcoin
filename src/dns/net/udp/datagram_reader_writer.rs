@@ -30,7 +30,7 @@ impl<'slice> DatagramReader<'slice> {
         let value = match value {
             Some(value) => value,
             None => {
-                dbg!("Failed to read u8");
+                eprintln!("Failed to read u8");
                 return None;
             }
         };
@@ -854,7 +854,6 @@ mod test_message {
             4, 208, 0, 0, 0, 0, 0, 0,
         ];
         let message = Message::read(&mut DatagramReader::new(&buffer)).unwrap();
-        dbg!(&message);
         assert_eq!(message.id(), 0x6A20);
     }
 }
