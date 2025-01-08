@@ -61,6 +61,16 @@ impl Name {
         let subdomain_labels = &self.0[num_sub_labels - num_domain_labels..];
         subdomain_labels == domain.0.as_slice()
     }
+
+    /// Generate suffix domain names from the domain name. For example, the
+    /// domain name "www.example.com" will generate the following suffix domain
+    /// names: "www.example.com", "example.com", "com", and "".
+    pub fn suffix_names(&self) -> Vec<Name> {
+        (0..self.labels().len())
+            .flat_map(|i| Name::create(self.labels()[i..].to_vec()))
+            .chain(std::iter::once(Name::root()))
+            .collect()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -240,5 +250,19 @@ mod tests {
         let subdomain = "example.".parse::<Name>().unwrap();
         let domain = "com.".parse::<Name>().unwrap();
         assert!(!subdomain.is_subdomain(&domain));
+    }
+
+    #[test]
+    fn test_suffix_names() {
+        let name = "www.example.com".parse::<Name>().unwrap();
+        assert_eq!(
+            name.suffix_names(),
+            vec![
+                "www.example.com".parse::<Name>().unwrap(),
+                "example.com".parse::<Name>().unwrap(),
+                "com".parse::<Name>().unwrap(),
+                "".parse::<Name>().unwrap(),
+            ]
+        );
     }
 }
