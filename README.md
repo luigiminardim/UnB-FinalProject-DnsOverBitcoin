@@ -24,12 +24,15 @@ DNS records from the Nostr network.
       - [x] TXT;
   - [x] Listen to DNS requests;
   - [ ] Resolve DNS requests;
+    - [x] In memory authority;
+    - [ ] Zone file;
+    - [ ] Catalog;
+    - [ ] Recursive catalog of zones?
   - [x] Return DNS responses;
   - [x] Forward DNS requests to other DNS servers;
     - [x] Compact mode;
 - [ ] Read Bitcoin UTXOs to find tokens mapping domain names to Nostr public keys;
 - [ ] Fetch DNS records from Nostr network using Nostr public keys;
-- [ ] Recursive resolve between Nostr domain names and Traditional domain names;
 
 ### Wallet
 
