@@ -38,6 +38,36 @@ impl InMemoryAuthority {
     }
 
     fn resolve_question(&self, question: &Question) -> (Vec<Record>, Vec<Record>, Vec<Record>) {
+        // Find answer records;
+        let answer_records = self.lookup(question);
+        if !answer_records.is_empty() || question.query_type() == QueryType::Type(RecordType::Cname)
+        {
+            return (answer_records, vec![], vec![]);
+        }
+
+        // Find CNAME answer records;
+        let cname_record = self
+            .lookup(&Question::new(
+                question.name().clone(),
+                QueryType::Type(RecordType::Cname),
+                question.query_class(),
+            ))
+            .first()
+            .cloned();
+        if let Some(cname_record) = cname_record {
+            let question_name = match cname_record.data() {
+                Data::Cname(cname_data) => cname_data.cname().clone(),
+                _ => return (vec![], vec![], vec![]), // unreachable
+            };
+            let (mut answer, authority, additional) = self.resolve_question(&Question::new(
+                question_name,
+                question.query_type(),
+                question.query_class(),
+            ));
+            answer.insert(0, cname_record);
+            return (answer, authority, additional);
+        }
+
         // Find authoritative referral records;
         let authority_records = self.find_authority_records(question);
         if !authority_records.is_empty() {
@@ -45,36 +75,8 @@ impl InMemoryAuthority {
             let glue_records = self.find_authority_glue_records(&authority_records);
             return (vec![], authority_records, glue_records);
         }
-        // Find answer records;
-        let answer_records = self.lookup(question);
-        if !answer_records.is_empty() || question.query_type() == QueryType::Type(RecordType::Cname)
-        {
-            return (answer_records, vec![], vec![]);
-        }
-        // Find CNAME answer records;
-        let cname_record = match self
-            .lookup(&Question::new(
-                question.name().clone(),
-                QueryType::Type(RecordType::Cname),
-                question.query_class(),
-            ))
-            .first()
-            .cloned()
-        {
-            Some(record) => record,
-            None => return (vec![], vec![], vec![]),
-        };
-        let question_name = match cname_record.data() {
-            Data::Cname(cname_data) => cname_data.cname().clone(),
-            _ => return (vec![], vec![], vec![]), // unreachable
-        };
-        let (mut answer, authority, additional) = self.resolve_question(&Question::new(
-            question_name,
-            question.query_type(),
-            question.query_class(),
-        ));
-        answer.insert(0, cname_record.clone());
-        (answer, authority, additional)
+
+        return (vec![], vec![], vec![]);
     }
 
     fn find_authority_records(&self, question: &Question) -> Vec<Record> {
@@ -424,7 +426,7 @@ mod test {
 
     /// QNAME=BRL.MIL, QTYPE=A https://datatracker.ietf.org/doc/html/rfc1034#section-6.2.6
     #[tokio::test]
-    async fn test_section_section_6_2_6() {
+    async fn test_section_6_2_6() {
         let authority = c_isi_edu_zone();
         let response = authority
             .resolve(&query_message_from_question(Question::new(
@@ -519,17 +521,14 @@ mod test {
         ));
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 1);
-        let expected_answers = vec![
-            Record::new(
-                "USC-ISIC.ARPA.".parse().unwrap(),
-                Class::IN,
-                86400,
-                Data::Cname(CnameData::new("C.ISI.EDU.".parse().unwrap())),
-            ),
-        ];
+        let expected_answers = vec![Record::new(
+            "USC-ISIC.ARPA.".parse().unwrap(),
+            Class::IN,
+            86400,
+            Data::Cname(CnameData::new("C.ISI.EDU.".parse().unwrap())),
+        )];
         response.answers().iter().for_each(|record| {
             assert!(expected_answers.contains(record));
         });
     }
-
 }
