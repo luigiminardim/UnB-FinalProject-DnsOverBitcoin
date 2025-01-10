@@ -259,10 +259,11 @@ impl Message {
     }
 
     pub fn into_response(&self, response_code: ResponseCode) -> Self {
-        Self::new(self.id)
+        self.clone()
             .set_is_response(true)
-            .set_opcode(self.opcode)
-            .set_recursion_desired(self.recursion_desired)
             .set_response_code(response_code)
+            .set_is_authoritative_answer(false)
+            .set_is_truncation(false)
+            .set_recursion_available(false)
     }
 }
