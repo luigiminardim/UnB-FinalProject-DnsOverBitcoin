@@ -12,20 +12,8 @@ pub use cname_data::CnameData;
 mod mx_data;
 pub use mx_data::MxData;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TxtData {
-    text: String,
-}
-
-impl TxtData {
-    pub fn new(text: String) -> Self {
-        Self { text }
-    }
-
-    pub fn text(&self) -> &str {
-        &self.text
-    }
-}
+mod txt_data;
+pub use txt_data::TxtData;
 
 mod aaaa_data;
 pub use aaaa_data::AaaaData;
