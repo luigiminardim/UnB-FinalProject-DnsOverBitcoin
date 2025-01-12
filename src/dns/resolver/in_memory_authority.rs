@@ -149,7 +149,7 @@ impl Resolver for InMemoryAuthority {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::dns::core::{Class, CnameData, MxData, NsData};
+    use crate::dns::core::{Class, MxData};
 
     fn query_message_from_question(question: Question) -> Message {
         Message::new(0)
@@ -201,7 +201,7 @@ mod test {
             "example.com".parse().unwrap(),
             "IN".parse().unwrap(),
             0,
-            Data::Cname(CnameData::new("a.example.com".parse().unwrap())),
+            Data::Cname("a.example.com".parse().unwrap()),
         );
         let a_record = Record::new(
             "a.example.com".parse().unwrap(),
@@ -298,7 +298,7 @@ mod test {
                 "USC-ISIC.ARPA.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::Cname(CnameData::new("C.ISI.EDU.".parse().unwrap())),
+                Data::Cname("C.ISI.EDU.".parse().unwrap()),
             ),
             Record::new(
                 "A.ISI.EDU.".parse().unwrap(),
@@ -445,7 +445,7 @@ mod test {
                 "MIL.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::Ns(NsData::new("A.ISI.EDU.".parse().unwrap())),
+                Data::Ns("A.ISI.EDU.".parse().unwrap()),
             ),
         ];
         response.answers().iter().for_each(|record| {
@@ -493,7 +493,7 @@ mod test {
                 "USC-ISIC.ARPA.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::Cname(CnameData::new("C.ISI.EDU.".parse().unwrap())),
+                Data::Cname("C.ISI.EDU.".parse().unwrap()),
             ),
             Record::new(
                 "C.ISI.EDU.".parse().unwrap(),
@@ -522,7 +522,7 @@ mod test {
             "USC-ISIC.ARPA.".parse().unwrap(),
             "IN".parse().unwrap(),
             86400,
-            Data::Cname(CnameData::new("C.ISI.EDU.".parse().unwrap())),
+            Data::Cname("C.ISI.EDU.".parse().unwrap()),
         )];
         response.answers().iter().for_each(|record| {
             assert!(expected_answers.contains(record));

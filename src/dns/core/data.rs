@@ -7,20 +7,8 @@ pub use a_data::AData;
 mod ns_data;
 pub use ns_data::NsData;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CnameData {
-    cname: Name,
-}
-
-impl CnameData {
-    pub fn new(name: Name) -> Self {
-        Self { cname: name }
-    }
-
-    pub fn cname(&self) -> &Name {
-        &self.cname
-    }
-}
+mod cname_data;
+pub use cname_data::CnameData;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MxData {
