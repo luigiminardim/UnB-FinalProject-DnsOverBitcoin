@@ -40,7 +40,7 @@ impl FromStr for QueryClass {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "ANY" => Ok(QueryClass::Any),
+            "*" => Ok(QueryClass::Any),
             _ => Class::from_str(s).map(QueryClass::Class),
         }
     }
@@ -50,7 +50,7 @@ impl ToString for QueryClass {
     fn to_string(&self) -> String {
         match self {
             QueryClass::Class(value) => value.to_string(),
-            QueryClass::Any => "ANY".to_string(),
+            QueryClass::Any => "*".to_string(),
         }
     }
 }
@@ -86,12 +86,12 @@ mod test {
 
         // valid
         assert_eq!(QueryClass::from_str("IN").unwrap(), QueryClass::Class(Class::In));
-        assert_eq!(QueryClass::from_str("ANY").unwrap(), QueryClass::Any);
+        assert_eq!(QueryClass::from_str("*").unwrap(), QueryClass::Any);
     }
 
     #[test]
     fn test_to_string() {
         assert_eq!(QueryClass::Class(Class::In).to_string(), "IN");
-        assert_eq!(QueryClass::Any.to_string(), "ANY");
+        assert_eq!(QueryClass::Any.to_string(), "*");
     }
 }

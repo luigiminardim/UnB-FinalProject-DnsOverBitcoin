@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use super::{Name, QueryClass, QueryType, Record};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,6 +37,38 @@ impl Question {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum QuestionFromStrErr {
+    Invalid,
+    NameFromStrErr(<Name as FromStr>::Err),
+    QueryTypeFromStrErr(<QueryType as FromStr>::Err),
+    QueryClassFromStrErr(<QueryClass as FromStr>::Err),
+}
+
+impl FromStr for Question {
+    type Err = QuestionFromStrErr;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut parts = s.split_whitespace();
+        let name = parts
+            .next()
+            .ok_or(QuestionFromStrErr::Invalid)?
+            .parse()
+            .map_err(QuestionFromStrErr::NameFromStrErr)?;
+        let query_class = parts
+            .next()
+            .ok_or(QuestionFromStrErr::Invalid)?
+            .parse()
+            .map_err(QuestionFromStrErr::QueryClassFromStrErr)?;
+        let query_type = parts
+            .next()
+            .ok_or(QuestionFromStrErr::Invalid)?
+            .parse()
+            .map_err(QuestionFromStrErr::QueryTypeFromStrErr)?;
+        Ok(Self::new(name, query_type, query_class))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::net::Ipv4Addr;
@@ -59,7 +93,7 @@ mod test {
         );
         assert!(question.matches(&record));
 
-        // matches with ALL type and ANY class
+        // matches with ANY type and ANY class
         let question = Question::new(
             "example.com".parse().unwrap(),
             QueryType::Any,
@@ -100,5 +134,40 @@ mod test {
             Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 1))),
         );
         assert!(!question.matches(&record));
+    }
+
+    #[test]
+    fn test_from_str() {
+        // valid "example.com IN A"
+        let question = "example.com IN A".parse::<Question>().unwrap();
+        assert_eq!(
+            question,
+            Question::new(
+                "example.com".parse().unwrap(),
+                QueryType::Type(RecordType::A),
+                QueryClass::Class(Class::In)
+            )
+        );
+
+        // valid "example.com IN ANY"
+        let question = "example.com IN *".parse::<Question>().unwrap();
+        assert_eq!(
+            question,
+            Question::new(
+                "example.com".parse().unwrap(),
+                QueryType::Any,
+                QueryClass::Class(Class::In)
+            )
+        );
+
+        // invalid "example.com IN"
+        assert!("example.com IN".parse::<Question>().is_err());
+
+        // invalid "example.com"
+        assert!("example.com".parse::<Question>().is_err());
+
+        // invalid "example .com IN A"
+        assert!("example .com IN A".parse::<Question>().is_err());
+
     }
 }

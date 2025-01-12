@@ -64,7 +64,7 @@ impl FromStr for QueryType {
             "AXFR" => Ok(QueryType::Axfr),
             "MAILB" => Ok(QueryType::MailB),
             "MAILA" => Ok(QueryType::MailA),
-            "ANY" => Ok(QueryType::Any),
+            "*" => Ok(QueryType::Any),
             _ => RecordType::from_str(s).map(QueryType::Type),
         }
     }
@@ -77,7 +77,7 @@ impl ToString for QueryType {
             QueryType::Axfr => "AXFR".to_string(),
             QueryType::MailB => "MAILB".to_string(),
             QueryType::MailA => "MAILA".to_string(),
-            QueryType::Any => "ANY".to_string(),
+            QueryType::Any => "*".to_string(),
         }
     }
 }
@@ -101,7 +101,7 @@ mod test_query_type {
         assert_eq!(QueryType::from_str("AXFR").unwrap(), QueryType::Axfr);
         assert_eq!(QueryType::from_str("MAILB").unwrap(), QueryType::MailB);
         assert_eq!(QueryType::from_str("MAILA").unwrap(), QueryType::MailA);
-        assert_eq!(QueryType::from_str("ANY").unwrap(), QueryType::Any);
+        assert_eq!(QueryType::from_str("*").unwrap(), QueryType::Any);
 
         assert_eq!(
             QueryType::from_str("A").unwrap(),
@@ -134,7 +134,7 @@ mod test_query_type {
         assert_eq!(QueryType::Axfr.to_string(), "AXFR");
         assert_eq!(QueryType::MailB.to_string(), "MAILB");
         assert_eq!(QueryType::MailA.to_string(), "MAILA");
-        assert_eq!(QueryType::Any.to_string(), "ANY");
+        assert_eq!(QueryType::Any.to_string(), "*");
 
         assert_eq!(QueryType::Type(RecordType::A).to_string(), "A");
         assert_eq!(QueryType::Type(RecordType::Aaaa).to_string(), "AAAA");

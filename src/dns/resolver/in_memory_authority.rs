@@ -179,11 +179,7 @@ mod test {
                 Data::A("127.0.0.3".parse().unwrap()),
             ),
         ];
-        let question = Question::new(
-            "example.com".parse().unwrap(),
-            "A".parse().unwrap(),
-            "IN".parse().unwrap(),
-        );
+        let question = "example.com IN A".parse().unwrap();
         let request = query_message_from_question(question);
         let response = InMemoryAuthority::new(records).resolve(&request).await;
         assert_eq!(response.answers().len(), 2);
@@ -210,11 +206,7 @@ mod test {
             Data::A("127.0.0.1".parse().unwrap()),
         );
         let records = vec![cname_record.clone(), a_record.clone()];
-        let question = Question::new(
-            "example.com".parse().unwrap(),
-            "A".parse().unwrap(),
-            "IN".parse().unwrap(),
-        );
+        let question = "example.com IN A".parse().unwrap();
         let request = query_message_from_question(question);
         let response = InMemoryAuthority::new(records).resolve(&request).await;
         assert_eq!(response.answers().len(), 2);
@@ -320,11 +312,7 @@ mod test {
     #[tokio::test]
     async fn test_section_6_2_1() {
         let authority = c_isi_edu_zone();
-        let request = query_message_from_question(Question::new(
-            "SRI-NIC.ARPA.".parse().unwrap(),
-            "A".parse().unwrap(),
-            "IN".parse().unwrap(),
-        ));
+        let request = query_message_from_question("SRI-NIC.ARPA. IN A".parse().unwrap());
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 2);
         let expected_answers = vec![
@@ -350,11 +338,7 @@ mod test {
     #[tokio::test]
     async fn test_section_6_2_2() {
         let authority = c_isi_edu_zone();
-        let request = query_message_from_question(Question::new(
-            "SRI-NIC.ARPA.".parse().unwrap(),
-            "ANY".parse().unwrap(),
-            "IN".parse().unwrap(),
-        ));
+        let request = query_message_from_question("SRI-NIC.ARPA. IN *".parse().unwrap());
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 3);
         let expected_answers = vec![
@@ -386,11 +370,7 @@ mod test {
     #[tokio::test]
     async fn test_section_6_2_3() {
         let authority = c_isi_edu_zone();
-        let request = query_message_from_question(Question::new(
-            "SRI-NIC.ARPA.".parse().unwrap(),
-            "MX".parse().unwrap(),
-            "IN".parse().unwrap(),
-        ));
+        let request = query_message_from_question("SRI-NIC.ARPA. IN MX".parse().unwrap());
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 1);
         let expected_answers = vec![Record::new(
@@ -408,11 +388,7 @@ mod test {
     #[tokio::test]
     async fn test_section_6_2_4() {
         let authority = c_isi_edu_zone();
-        let request = query_message_from_question(Question::new(
-            "SRI-NIC.ARPA.".parse().unwrap(),
-            "NS".parse().unwrap(),
-            "IN".parse().unwrap(),
-        ));
+        let request = query_message_from_question("SRI-NIC.ARPA. IN NS".parse().unwrap());
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 0);
         let expected_answers = vec![];
@@ -426,11 +402,9 @@ mod test {
     async fn test_section_6_2_6() {
         let authority = c_isi_edu_zone();
         let response = authority
-            .resolve(&query_message_from_question(Question::new(
-                "BRL.MIL.".parse().unwrap(),
-                "A".parse().unwrap(),
-                "IN".parse().unwrap(),
-            )))
+            .resolve(&query_message_from_question(
+                "BRL.MIL. IN A".parse().unwrap(),
+            ))
             .await;
         assert_eq!(response.answers().len(), 0);
         assert_eq!(response.authorities().len(), 2);
@@ -481,11 +455,7 @@ mod test {
     #[tokio::test]
     async fn test_section_6_2_7() {
         let authority = c_isi_edu_zone();
-        let request = query_message_from_question(Question::new(
-            "USC-ISIC.ARPA".parse().unwrap(),
-            "A".parse().unwrap(),
-            "IN".parse().unwrap(),
-        ));
+        let request = query_message_from_question("USC-ISIC.ARPA IN A".parse().unwrap());
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 2);
         let expected_answers = vec![
@@ -511,11 +481,7 @@ mod test {
     #[tokio::test]
     async fn test_section_6_2_8() {
         let authority = c_isi_edu_zone();
-        let request = query_message_from_question(Question::new(
-            "USC-ISIC.ARPA.".parse().unwrap(),
-            "CNAME".parse().unwrap(),
-            "IN".parse().unwrap(),
-        ));
+        let request = query_message_from_question("USC-ISIC.ARPA. IN CNAME".parse().unwrap());
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 1);
         let expected_answers = vec![Record::new(
