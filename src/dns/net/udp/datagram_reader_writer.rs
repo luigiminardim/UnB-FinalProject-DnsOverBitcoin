@@ -732,7 +732,7 @@ impl ReadableWritable for Record {
         let data_length = u16::read(buffer)?;
         let data = match record_type {
             RecordType::A => AData::read(buffer).map(Data::A),
-            RecordType::NS => NsData::read(buffer).map(Data::Ns),
+            RecordType::Ns => NsData::read(buffer).map(Data::Ns),
             RecordType::Cname => CnameData::read(buffer).map(Data::Cname),
             RecordType::Aaaa => AaaaData::read(buffer).map(Data::Aaaa),
             RecordType::Mx => MxData::read(buffer).map(Data::Mx),

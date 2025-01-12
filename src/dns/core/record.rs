@@ -23,7 +23,7 @@ impl Record {
     pub fn record_type(&self) -> RecordType {
         match &self.data {
             Data::A(_) => RecordType::A,
-            Data::Ns(_) => RecordType::NS,
+            Data::Ns(_) => RecordType::Ns,
             Data::Cname(_) => RecordType::Cname,
             Data::Aaaa(_) => RecordType::Aaaa,
             Data::Mx(_) => RecordType::Mx,
