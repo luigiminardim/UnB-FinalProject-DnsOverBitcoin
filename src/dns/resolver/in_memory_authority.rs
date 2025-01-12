@@ -189,7 +189,7 @@ mod test {
         assert_eq!(response.answers().len(), 2);
         response.answers().iter().for_each(|record| {
             assert_eq!(record.name(), &"example.com".parse().unwrap());
-            assert_eq!(record.class(), Class::IN);
+            assert_eq!(record.class(), Class::In);
             assert_eq!(record.ttl(), 0);
             assert!(matches!(record.data(), Data::A(_)));
         });

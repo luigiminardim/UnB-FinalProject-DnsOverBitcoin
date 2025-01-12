@@ -61,21 +61,21 @@ mod test {
 
     #[test]
     fn test_from_u16() {
-        assert_eq!(QueryClass::from(1), QueryClass::Class(Class::IN));
+        assert_eq!(QueryClass::from(1), QueryClass::Class(Class::In));
         assert_eq!(QueryClass::from(255), QueryClass::Any);
     }
 
     #[test]
     fn test_into_u16() {
-        assert_eq!(u16::from(QueryClass::Class(Class::IN)), 1);
+        assert_eq!(u16::from(QueryClass::Class(Class::In)), 1);
         assert_eq!(u16::from(QueryClass::Any), 255);
     }
 
     #[test]
     fn test_matches() {
-        assert!(QueryClass::Class(Class::IN).matches(Class::IN));
-        assert!(!QueryClass::Class(Class::IN).matches(Class::Unknown(0)));
-        assert!(QueryClass::Any.matches(Class::IN));
+        assert!(QueryClass::Class(Class::In).matches(Class::In));
+        assert!(!QueryClass::Class(Class::In).matches(Class::Unknown(0)));
+        assert!(QueryClass::Any.matches(Class::In));
         assert!(QueryClass::Any.matches(Class::Unknown(0)));
     }
 
@@ -85,13 +85,13 @@ mod test {
         assert!(QueryClass::from_str("INVALID").is_err());
 
         // valid
-        assert_eq!(QueryClass::from_str("IN").unwrap(), QueryClass::Class(Class::IN));
+        assert_eq!(QueryClass::from_str("IN").unwrap(), QueryClass::Class(Class::In));
         assert_eq!(QueryClass::from_str("ANY").unwrap(), QueryClass::Any);
     }
 
     #[test]
     fn test_to_string() {
-        assert_eq!(QueryClass::Class(Class::IN).to_string(), "IN");
+        assert_eq!(QueryClass::Class(Class::In).to_string(), "IN");
         assert_eq!(QueryClass::Any.to_string(), "ANY");
     }
 }

@@ -49,11 +49,11 @@ mod test {
         let question = Question::new(
             "example.com".parse().unwrap(),
             QueryType::Type(RecordType::A),
-            QueryClass::Class(Class::IN),
+            QueryClass::Class(Class::In),
         );
         let record = Record::new(
             "example.com".parse().unwrap(),
-            Class::IN,
+            Class::In,
             0,
             Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 1))),
         );
@@ -67,7 +67,7 @@ mod test {
         );
         let record = Record::new(
             "example.com".parse().unwrap(),
-            Class::IN,
+            Class::In,
             0,
             Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 1))),
         );
@@ -77,11 +77,11 @@ mod test {
         let question = Question::new(
             "example.com".parse().unwrap(),
             QueryType::Type(RecordType::A),
-            QueryClass::Class(Class::IN),
+            QueryClass::Class(Class::In),
         );
         let record = Record::new(
             "com".parse().unwrap(),
-            Class::IN,
+            Class::In,
             0,
             Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 1))),
         );
@@ -91,11 +91,11 @@ mod test {
         let question = Question::new(
             "example.com".parse().unwrap(),
             QueryType::Type(RecordType::Cname),
-            QueryClass::Class(Class::IN),
+            QueryClass::Class(Class::In),
         );
         let record = Record::new(
             "example.com".parse().unwrap(),
-            Class::IN,
+            Class::In,
             0,
             Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 1))),
         );

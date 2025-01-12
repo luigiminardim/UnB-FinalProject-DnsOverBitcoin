@@ -11,7 +11,7 @@ async fn main() {
     let _udp_resolver = UdpStubResolver::new(cloud_flare_socket_addr);
     let in_memory_authority = InMemoryAuthority::new(vec![Record::new(
         "ord.".parse().unwrap(),
-        Class::IN,
+        Class::In,
         0,
         Data::A(AData::new("1.2.3.4".parse().unwrap())),
     )]);

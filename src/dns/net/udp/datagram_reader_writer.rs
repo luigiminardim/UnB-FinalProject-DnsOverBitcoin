@@ -393,13 +393,13 @@ mod test_query_class {
         let datagram = [0x00, 0x01];
         let mut buffer = DatagramReader::new(&datagram);
         let query_class = QueryClass::read(&mut buffer).unwrap();
-        assert_eq!(query_class, QueryClass::Class(Class::IN));
+        assert_eq!(query_class, QueryClass::Class(Class::In));
         assert_eq!(buffer.pos, 2);
     }
 
     #[test]
     fn test_write_class() {
-        let query_class = QueryClass::Class(Class::IN);
+        let query_class = QueryClass::Class(Class::In);
         let mut datagram = [0; UDP_LENGTH_LIMIT];
         let mut buffer = DatagramWriter::new(&mut datagram);
         query_class.write(&mut buffer).unwrap();
@@ -439,7 +439,7 @@ mod test_question {
         let question = Question::read(&mut buffer).unwrap();
         assert_eq!(question.name(), &"com.".parse::<Name>().unwrap());
         assert_eq!(question.query_type(), QueryType::Type(RecordType::A));
-        assert_eq!(question.query_class(), QueryClass::Class(Class::IN));
+        assert_eq!(question.query_class(), QueryClass::Class(Class::In));
         assert_eq!(buffer.pos, 9);
     }
 
@@ -448,7 +448,7 @@ mod test_question {
         let question = Question::new(
             "com.".parse().unwrap(),
             QueryType::Type(RecordType::A),
-            QueryClass::Class(Class::IN),
+            QueryClass::Class(Class::In),
         );
         let mut datagram = [0; UDP_LENGTH_LIMIT];
         let mut buffer = DatagramWriter::new(&mut datagram);
@@ -806,7 +806,7 @@ mod test_record {
         let record = Record::read(&mut buffer).unwrap();
         assert_eq!(record.name(), &"foo.".parse::<Name>().unwrap());
         assert_eq!(record.record_type(), RecordType::Txt);
-        assert_eq!(record.class(), Class::IN);
+        assert_eq!(record.class(), Class::In);
         assert_eq!(record.ttl(), 0 as Ttl);
         assert_eq!(record.data(), &Data::Txt(TxtData::new("bar".to_string())));
     }
@@ -815,7 +815,7 @@ mod test_record {
     fn test_write_txt() {
         let record = Record::new(
             "foo.".parse().unwrap(),
-            Class::IN,
+            Class::In,
             0 as Ttl,
             Data::Txt(TxtData::new("bar".to_string())),
         );
@@ -850,7 +850,7 @@ mod test_record {
         let record = Record::read(&mut buffer).unwrap();
         assert_eq!(record.name(), &"foo.".parse::<Name>().unwrap());
         assert_eq!(record.record_type(), RecordType::Unknown(0x03));
-        assert_eq!(record.class(), Class::IN);
+        assert_eq!(record.class(), Class::In);
         assert_eq!(record.ttl(), 0 as Ttl);
         assert_eq!(
             record.data(),
@@ -862,7 +862,7 @@ mod test_record {
     fn test_write_unknown() {
         let record = Record::new(
             "foo.".parse().unwrap(),
-            Class::IN,
+            Class::In,
             0 as Ttl,
             Data::Unknown(RecordType::Unknown(0x03), vec![3, b'b', b'a', b'r', 0]),
         );
