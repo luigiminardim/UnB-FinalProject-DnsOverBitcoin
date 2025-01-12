@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use super::Class;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -33,6 +35,26 @@ impl QueryClass {
     }
 }
 
+impl FromStr for QueryClass {
+    type Err = <Class as FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "ANY" => Ok(QueryClass::Any),
+            _ => Class::from_str(s).map(QueryClass::Class),
+        }
+    }
+}
+
+impl ToString for QueryClass {
+    fn to_string(&self) -> String {
+        match self {
+            QueryClass::Class(value) => value.to_string(),
+            QueryClass::Any => "ANY".to_string(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -55,5 +77,21 @@ mod test {
         assert!(!QueryClass::Class(Class::IN).matches(Class::Unknown(0)));
         assert!(QueryClass::Any.matches(Class::IN));
         assert!(QueryClass::Any.matches(Class::Unknown(0)));
+    }
+
+    #[test]
+    fn test_from_str() {
+        // invalid
+        assert!(QueryClass::from_str("INVALID").is_err());
+
+        // valid
+        assert_eq!(QueryClass::from_str("IN").unwrap(), QueryClass::Class(Class::IN));
+        assert_eq!(QueryClass::from_str("ANY").unwrap(), QueryClass::Any);
+    }
+
+    #[test]
+    fn test_to_string() {
+        assert_eq!(QueryClass::Class(Class::IN).to_string(), "IN");
+        assert_eq!(QueryClass::Any.to_string(), "ANY");
     }
 }

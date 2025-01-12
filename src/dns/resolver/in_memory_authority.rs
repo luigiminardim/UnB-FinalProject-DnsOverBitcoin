@@ -182,7 +182,7 @@ mod test {
         let question = Question::new(
             "example.com".parse().unwrap(),
             QueryType::Type(RecordType::A),
-            QueryClass::Class(Class::IN),
+            "IN".parse().unwrap(),
         );
         let request = query_message_from_question(question);
         let response = InMemoryAuthority::new(records).resolve(&request).await;
@@ -213,7 +213,7 @@ mod test {
         let question = Question::new(
             "example.com".parse().unwrap(),
             QueryType::Type(RecordType::A),
-            QueryClass::Class(Class::IN),
+            "IN".parse().unwrap(),
         );
         let request = query_message_from_question(question);
         let response = InMemoryAuthority::new(records).resolve(&request).await;
@@ -323,7 +323,7 @@ mod test {
         let request = query_message_from_question(Question::new(
             "SRI-NIC.ARPA.".parse().unwrap(),
             QueryType::Type(RecordType::A),
-            QueryClass::Class(Class::IN),
+            "IN".parse().unwrap(),
         ));
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 2);
@@ -353,7 +353,7 @@ mod test {
         let request = query_message_from_question(Question::new(
             "SRI-NIC.ARPA.".parse().unwrap(),
             QueryType::All,
-            QueryClass::Class(Class::IN),
+            "IN".parse().unwrap(),
         ));
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 3);
@@ -389,7 +389,7 @@ mod test {
         let request = query_message_from_question(Question::new(
             "SRI-NIC.ARPA.".parse().unwrap(),
             QueryType::Type(RecordType::Mx),
-            QueryClass::Class(Class::IN),
+            "IN".parse().unwrap(),
         ));
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 1);
@@ -411,7 +411,7 @@ mod test {
         let request = query_message_from_question(Question::new(
             "SRI-NIC.ARPA.".parse().unwrap(),
             QueryType::Type(RecordType::NS),
-            QueryClass::Class(Class::IN),
+            "IN".parse().unwrap(),
         ));
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 0);
@@ -429,7 +429,7 @@ mod test {
             .resolve(&query_message_from_question(Question::new(
                 "BRL.MIL.".parse().unwrap(),
                 QueryType::Type(RecordType::A),
-                QueryClass::Class(Class::IN),
+                "IN".parse().unwrap(),
             )))
             .await;
         assert_eq!(response.answers().len(), 0);
@@ -484,7 +484,7 @@ mod test {
         let request = query_message_from_question(Question::new(
             "USC-ISIC.ARPA".parse().unwrap(),
             QueryType::Type(RecordType::A),
-            QueryClass::Class(Class::IN),
+            "IN".parse().unwrap(),
         ));
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 2);
@@ -514,7 +514,7 @@ mod test {
         let request = query_message_from_question(Question::new(
             "USC-ISIC.ARPA.".parse().unwrap(),
             QueryType::Type(RecordType::Cname),
-            QueryClass::Class(Class::IN),
+            "IN".parse().unwrap(),
         ));
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 1);
