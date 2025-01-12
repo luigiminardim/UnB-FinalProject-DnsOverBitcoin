@@ -44,7 +44,6 @@ mod test {
     fn test_from_str() {
         // invalid address
         let data: Result<CnameData, _> = "example .com.".parse();
-        dbg!(&data);
         assert!(data.is_err());
 
         // valid address
