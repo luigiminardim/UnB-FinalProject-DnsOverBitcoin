@@ -165,19 +165,19 @@ mod test {
         let records = vec![
             Record::new(
                 "example.com".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 0,
                 Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 1))),
             ),
             Record::new(
                 "example.com".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 0,
                 Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 2))),
             ),
             Record::new(
                 "not-example.com".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 0,
                 Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 3))),
             ),
@@ -202,13 +202,13 @@ mod test {
     async fn test_resolve_aname_with_cname() {
         let cname_record = Record::new(
             "example.com".parse().unwrap(),
-            Class::IN,
+            "IN".parse().unwrap(),
             0,
             Data::Cname(CnameData::new("a.example.com".parse().unwrap())),
         );
         let a_record = Record::new(
             "a.example.com".parse().unwrap(),
-            Class::IN,
+            "IN".parse().unwrap(),
             0,
             Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 1))),
         );
@@ -233,85 +233,85 @@ mod test {
         let records = vec![
             Record::new(
                 "C.ISI.EDU.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 604800,
                 Data::Ns(NsData::new("A.ISI.EDU.".parse().unwrap())),
             ),
             Record::new(
                 "C.ISI.EDU.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 604800,
                 Data::Ns(NsData::new("C.ISI.EDU.".parse().unwrap())),
             ),
             Record::new(
                 "C.ISI.EDU.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 604800,
                 Data::Ns(NsData::new("C.ISI.EDU.".parse().unwrap())),
             ),
             Record::new(
                 "C.ISI.EDU.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 604800,
                 Data::Ns(NsData::new("SRI-NIC.ARPA.".parse().unwrap())),
             ),
             Record::new(
                 "MIL.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::Ns(NsData::new("SRI-NIC.ARPA.".parse().unwrap())),
             ),
             Record::new(
                 "MIL.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::Ns(NsData::new("A.ISI.EDU.".parse().unwrap())),
             ),
             Record::new(
                 "EDU.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::Ns(NsData::new("SRI-NIC.ARPA.".parse().unwrap())),
             ),
             Record::new(
                 "EDU.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::Ns(NsData::new("C.ISI.EDU.".parse().unwrap())),
             ),
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::A(AData::new("26.0.0.73".parse().unwrap())),
             ),
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::A(AData::new("10.0.0.51".parse().unwrap())),
             ),
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::Mx(MxData::new(0, "SRI-NIC.ARPA.".parse().unwrap())),
             ),
             Record::new(
                 "USC-ISIC.ARPA.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::Cname(CnameData::new("C.ISI.EDU.".parse().unwrap())),
             ),
             Record::new(
                 "A.ISI.EDU.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::A(AData::new("26.3.0.103".parse().unwrap())),
             ),
             Record::new(
                 "C.ISI.EDU.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::A(AData::new("10.0.0.52".parse().unwrap())),
             ),
@@ -333,13 +333,13 @@ mod test {
         let expected_answers = vec![
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::A(AData::new("26.0.0.73".parse().unwrap())),
             ),
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::A(AData::new("10.0.0.51".parse().unwrap())),
             ),
@@ -363,19 +363,19 @@ mod test {
         let expected_answers = vec![
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::A(AData::new("26.0.0.73".parse().unwrap())),
             ),
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::A(AData::new("10.0.0.51".parse().unwrap())),
             ),
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::Mx(MxData::new(0, "SRI-NIC.ARPA.".parse().unwrap())),
             ),
@@ -398,7 +398,7 @@ mod test {
         assert_eq!(response.answers().len(), 1);
         let expected_answers = vec![Record::new(
             "SRI-NIC.ARPA.".parse().unwrap(),
-            Class::IN,
+            "IN".parse().unwrap(),
             86400,
             Data::Mx(MxData::new(0, "sri-nic.arpa".parse().unwrap())),
         )];
@@ -440,13 +440,13 @@ mod test {
         let expected_authorities = vec![
             Record::new(
                 "MIL.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::Ns(NsData::new("SRI-NIC.ARPA.".parse().unwrap())),
             ),
             Record::new(
                 "MIL.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::Ns(NsData::new("A.ISI.EDU.".parse().unwrap())),
             ),
@@ -458,19 +458,19 @@ mod test {
         let expected_additional = vec![
             Record::new(
                 "A.ISI.EDU.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::A(AData::new("26.3.0.103".parse().unwrap())),
             ),
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::A(AData::new("26.0.0.73".parse().unwrap())),
             ),
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::A(AData::new("10.0.0.51".parse().unwrap())),
             ),
@@ -494,13 +494,13 @@ mod test {
         let expected_answers = vec![
             Record::new(
                 "USC-ISIC.ARPA.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::Cname(CnameData::new("C.ISI.EDU.".parse().unwrap())),
             ),
             Record::new(
                 "C.ISI.EDU.".parse().unwrap(),
-                Class::IN,
+                "IN".parse().unwrap(),
                 86400,
                 Data::A(AData::new("10.0.0.52".parse().unwrap())),
             ),
@@ -523,7 +523,7 @@ mod test {
         assert_eq!(response.answers().len(), 1);
         let expected_answers = vec![Record::new(
             "USC-ISIC.ARPA.".parse().unwrap(),
-            Class::IN,
+            "IN".parse().unwrap(),
             86400,
             Data::Cname(CnameData::new("C.ISI.EDU.".parse().unwrap())),
         )];

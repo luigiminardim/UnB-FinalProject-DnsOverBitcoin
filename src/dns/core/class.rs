@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Class {
     IN,
@@ -22,6 +24,30 @@ impl From<Class> for u16 {
     }
 }
 
+pub enum ClassFromStrErr {
+    InvalidClass,
+}
+
+impl FromStr for Class {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "IN" => Ok(Class::IN),
+            _ => Err(()),
+        }
+    }
+}
+
+impl ToString for Class {
+    fn to_string(&self) -> String {
+        match self {
+            Class::IN => "IN".to_string(),
+            Class::Unknown(value) => value.to_string(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test_class {
     use super::*;
@@ -38,5 +64,17 @@ mod test_class {
         assert_eq!(u16::from(Class::Unknown(0)), 0);
         assert_eq!(u16::from(Class::IN), 1);
         assert_eq!(u16::from(Class::Unknown(2)), 2);
+    }
+
+    #[test]
+    fn test_class_from_str() {
+        assert_eq!("IN".parse::<Class>(), Ok(Class::IN));
+        assert_eq!("INVALID".parse::<Class>(), Err(()));
+    }
+
+    #[test]
+    fn test_class_to_string() {
+        assert_eq!(Class::IN.to_string(), "IN");
+        assert_eq!(Class::Unknown(0).to_string(), "0");
     }
 }
