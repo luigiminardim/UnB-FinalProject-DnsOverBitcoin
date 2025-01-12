@@ -1,5 +1,4 @@
 use super::record_type::RecordType;
-use std::net::Ipv6Addr;
 
 mod a_data;
 pub use a_data::AData;
@@ -28,20 +27,8 @@ impl TxtData {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AaaaData {
-    address: Ipv6Addr,
-}
-
-impl AaaaData {
-    pub fn new(address: Ipv6Addr) -> Self {
-        Self { address }
-    }
-
-    pub fn address(&self) -> Ipv6Addr {
-        self.address
-    }
-}
+mod aaaa_data;
+pub use aaaa_data::AaaaData;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Data {
