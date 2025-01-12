@@ -4,20 +4,8 @@ use std::net::Ipv6Addr;
 mod a_data;
 pub use a_data::AData;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NsData {
-    name_server: Name,
-}
-
-impl NsData {
-    pub fn new(name_server: Name) -> Self {
-        Self { name_server }
-    }
-
-    pub fn name_server(&self) -> &Name {
-        &self.name_server
-    }
-}
+mod ns_data;
+pub use ns_data::NsData;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CnameData {
