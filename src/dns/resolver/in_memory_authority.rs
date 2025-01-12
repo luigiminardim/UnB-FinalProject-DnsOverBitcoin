@@ -181,7 +181,7 @@ mod test {
         ];
         let question = Question::new(
             "example.com".parse().unwrap(),
-            QueryType::Type("A".parse().unwrap()),
+            "A".parse().unwrap(),
             "IN".parse().unwrap(),
         );
         let request = query_message_from_question(question);
@@ -212,7 +212,7 @@ mod test {
         let records = vec![cname_record.clone(), a_record.clone()];
         let question = Question::new(
             "example.com".parse().unwrap(),
-            QueryType::Type("A".parse().unwrap()),
+            "A".parse().unwrap(),
             "IN".parse().unwrap(),
         );
         let request = query_message_from_question(question);
@@ -322,7 +322,7 @@ mod test {
         let authority = c_isi_edu_zone();
         let request = query_message_from_question(Question::new(
             "SRI-NIC.ARPA.".parse().unwrap(),
-            QueryType::Type("A".parse().unwrap()),
+            "A".parse().unwrap(),
             "IN".parse().unwrap(),
         ));
         let response = authority.resolve(&request).await;
@@ -352,7 +352,7 @@ mod test {
         let authority = c_isi_edu_zone();
         let request = query_message_from_question(Question::new(
             "SRI-NIC.ARPA.".parse().unwrap(),
-            QueryType::All,
+            "ANY".parse().unwrap(),
             "IN".parse().unwrap(),
         ));
         let response = authority.resolve(&request).await;
@@ -388,7 +388,7 @@ mod test {
         let authority = c_isi_edu_zone();
         let request = query_message_from_question(Question::new(
             "SRI-NIC.ARPA.".parse().unwrap(),
-            QueryType::Type("MX".parse().unwrap()),
+            "MX".parse().unwrap(),
             "IN".parse().unwrap(),
         ));
         let response = authority.resolve(&request).await;
@@ -410,7 +410,7 @@ mod test {
         let authority = c_isi_edu_zone();
         let request = query_message_from_question(Question::new(
             "SRI-NIC.ARPA.".parse().unwrap(),
-            QueryType::Type("NS".parse().unwrap()),
+            "NS".parse().unwrap(),
             "IN".parse().unwrap(),
         ));
         let response = authority.resolve(&request).await;
@@ -428,7 +428,7 @@ mod test {
         let response = authority
             .resolve(&query_message_from_question(Question::new(
                 "BRL.MIL.".parse().unwrap(),
-                QueryType::Type("A".parse().unwrap()),
+                "A".parse().unwrap(),
                 "IN".parse().unwrap(),
             )))
             .await;
@@ -483,7 +483,7 @@ mod test {
         let authority = c_isi_edu_zone();
         let request = query_message_from_question(Question::new(
             "USC-ISIC.ARPA".parse().unwrap(),
-            QueryType::Type("A".parse().unwrap()),
+            "A".parse().unwrap(),
             "IN".parse().unwrap(),
         ));
         let response = authority.resolve(&request).await;
@@ -513,7 +513,7 @@ mod test {
         let authority = c_isi_edu_zone();
         let request = query_message_from_question(Question::new(
             "USC-ISIC.ARPA.".parse().unwrap(),
-            QueryType::Type("Cname".parse().unwrap()),
+            "CNAME".parse().unwrap(),
             "IN".parse().unwrap(),
         ));
         let response = authority.resolve(&request).await;

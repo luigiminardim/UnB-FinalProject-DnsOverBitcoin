@@ -62,7 +62,7 @@ mod test {
         // matches with ALL type and ANY class
         let question = Question::new(
             "example.com".parse().unwrap(),
-            QueryType::All,
+            QueryType::Any,
             QueryClass::Any,
         );
         let record = Record::new(
