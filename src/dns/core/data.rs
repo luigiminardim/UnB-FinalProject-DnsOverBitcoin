@@ -1,23 +1,8 @@
-use std::net::{Ipv4Addr, Ipv6Addr};
-
 use super::{record_type::RecordType, Name};
+use std::net::Ipv6Addr;
 
-// use super::name::Name;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AData {
-    address: Ipv4Addr,
-}
-
-impl AData {
-    pub fn new(address: Ipv4Addr) -> Self {
-        Self { address }
-    }
-
-    pub fn address(&self) -> Ipv4Addr {
-        self.address
-    }
-}
+mod a_data;
+pub use a_data::AData;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NsData {

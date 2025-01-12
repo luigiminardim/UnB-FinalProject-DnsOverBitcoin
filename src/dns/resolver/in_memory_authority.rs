@@ -148,11 +148,8 @@ impl Resolver for InMemoryAuthority {
 
 #[cfg(test)]
 mod test {
-    use std::net::Ipv4Addr;
-
-    use crate::dns::core::{AData, Class, CnameData, MxData, NsData};
-
     use super::*;
+    use crate::dns::core::{Class, CnameData, MxData, NsData};
 
     fn query_message_from_question(question: Question) -> Message {
         Message::new(0)
@@ -167,19 +164,19 @@ mod test {
                 "example.com".parse().unwrap(),
                 "IN".parse().unwrap(),
                 0,
-                Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 1))),
+                Data::A("127.0.0.1".parse().unwrap()),
             ),
             Record::new(
                 "example.com".parse().unwrap(),
                 "IN".parse().unwrap(),
                 0,
-                Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 2))),
+                Data::A("127.0.0.2".parse().unwrap()),
             ),
             Record::new(
                 "not-example.com".parse().unwrap(),
                 "IN".parse().unwrap(),
                 0,
-                Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 3))),
+                Data::A("127.0.0.3".parse().unwrap()),
             ),
         ];
         let question = Question::new(
@@ -210,7 +207,7 @@ mod test {
             "a.example.com".parse().unwrap(),
             "IN".parse().unwrap(),
             0,
-            Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 1))),
+            Data::A("127.0.0.1".parse().unwrap()),
         );
         let records = vec![cname_record.clone(), a_record.clone()];
         let question = Question::new(
@@ -283,13 +280,13 @@ mod test {
                 "SRI-NIC.ARPA.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::A(AData::new("26.0.0.73".parse().unwrap())),
+                Data::A("26.0.0.73".parse().unwrap()),
             ),
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::A(AData::new("10.0.0.51".parse().unwrap())),
+                Data::A("10.0.0.51".parse().unwrap()),
             ),
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
@@ -307,13 +304,13 @@ mod test {
                 "A.ISI.EDU.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::A(AData::new("26.3.0.103".parse().unwrap())),
+                Data::A("26.3.0.103".parse().unwrap()),
             ),
             Record::new(
                 "C.ISI.EDU.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::A(AData::new("10.0.0.52".parse().unwrap())),
+                Data::A("10.0.0.52".parse().unwrap()),
             ),
         ];
         InMemoryAuthority::new(records)
@@ -335,13 +332,13 @@ mod test {
                 "SRI-NIC.ARPA.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::A(AData::new("26.0.0.73".parse().unwrap())),
+                Data::A("26.0.0.73".parse().unwrap()),
             ),
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::A(AData::new("10.0.0.51".parse().unwrap())),
+                Data::A("10.0.0.51".parse().unwrap()),
             ),
         ];
         response.answers().iter().for_each(|record| {
@@ -365,13 +362,13 @@ mod test {
                 "SRI-NIC.ARPA.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::A(AData::new("26.0.0.73".parse().unwrap())),
+                Data::A("26.0.0.73".parse().unwrap()),
             ),
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::A(AData::new("10.0.0.51".parse().unwrap())),
+                Data::A("10.0.0.51".parse().unwrap()),
             ),
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
@@ -460,19 +457,19 @@ mod test {
                 "A.ISI.EDU.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::A(AData::new("26.3.0.103".parse().unwrap())),
+                Data::A("26.3.0.103".parse().unwrap()),
             ),
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::A(AData::new("26.0.0.73".parse().unwrap())),
+                Data::A("26.0.0.73".parse().unwrap()),
             ),
             Record::new(
                 "SRI-NIC.ARPA.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::A(AData::new("10.0.0.51".parse().unwrap())),
+                Data::A("10.0.0.51".parse().unwrap()),
             ),
         ];
         response.additional().iter().for_each(|record| {
@@ -502,7 +499,7 @@ mod test {
                 "C.ISI.EDU.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::A(AData::new("10.0.0.52".parse().unwrap())),
+                Data::A("10.0.0.52".parse().unwrap()),
             ),
         ];
         response.answers().iter().for_each(|record| {
