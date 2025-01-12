@@ -149,7 +149,7 @@ impl Resolver for InMemoryAuthority {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::dns::core::{Class, MxData};
+    use crate::dns::core::Class;
 
     fn query_message_from_question(question: Question) -> Message {
         Message::new(0)
@@ -292,7 +292,7 @@ mod test {
                 "SRI-NIC.ARPA.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::Mx(MxData::new(0, "SRI-NIC.ARPA.".parse().unwrap())),
+                Data::Mx("0 SRI-NIC.ARPA.".parse().unwrap()),
             ),
             Record::new(
                 "USC-ISIC.ARPA.".parse().unwrap(),
@@ -374,7 +374,7 @@ mod test {
                 "SRI-NIC.ARPA.".parse().unwrap(),
                 "IN".parse().unwrap(),
                 86400,
-                Data::Mx(MxData::new(0, "SRI-NIC.ARPA.".parse().unwrap())),
+                Data::Mx("0 SRI-NIC.ARPA.".parse().unwrap()),
             ),
         ];
         response.answers().iter().for_each(|record| {
@@ -397,7 +397,7 @@ mod test {
             "SRI-NIC.ARPA.".parse().unwrap(),
             "IN".parse().unwrap(),
             86400,
-            Data::Mx(MxData::new(0, "sri-nic.arpa".parse().unwrap())),
+            Data::Mx("0 sri-nic.arpa".parse().unwrap()),
         )];
         response.answers().iter().for_each(|record| {
             assert!(expected_answers.contains(record));

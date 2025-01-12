@@ -1,4 +1,4 @@
-use super::{record_type::RecordType, Name};
+use super::record_type::RecordType;
 use std::net::Ipv6Addr;
 
 mod a_data;
@@ -10,33 +10,8 @@ pub use ns_data::NsData;
 mod cname_data;
 pub use cname_data::CnameData;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MxData {
-    /// A 16 bit integer which specifies the preference given to this RR among
-    /// others at the same owner.  Lower values are preferred.
-    preference: u16,
-
-    /// A <domain-name> which specifies a host willing to act as a mail
-    /// exchange for the owner name.
-    exchange: Name,
-}
-
-impl MxData {
-    pub fn new(preference: u16, exchange: Name) -> Self {
-        Self {
-            preference,
-            exchange,
-        }
-    }
-
-    pub fn preference(&self) -> u16 {
-        self.preference
-    }
-
-    pub fn exchange(&self) -> &Name {
-        &self.exchange
-    }
-}
+mod mx_data;
+pub use mx_data::MxData;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TxtData {
