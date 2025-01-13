@@ -27,3 +27,6 @@ pub use record_type::*;
 
 mod message;
 pub use message::*;
+
+mod zone_file;
+pub use zone_file::*;
