@@ -168,6 +168,5 @@ mod test {
 
         // invalid "example .com IN A"
         assert!("example .com IN A".parse::<Question>().is_err());
-
     }
 }

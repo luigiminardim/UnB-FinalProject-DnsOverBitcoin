@@ -48,12 +48,17 @@ mod test {
 
         // valid address
         let data: AaaaData = "2001:0db8:85a3:0000:0000:8a2e:0370:7334".parse().unwrap();
-        assert_eq!(data.address(), Ipv6Addr::new(0x2001, 0x0db8, 0x85a3, 0x0000, 0x0000, 0x8a2e, 0x0370, 0x7334));
+        assert_eq!(
+            data.address(),
+            Ipv6Addr::new(0x2001, 0x0db8, 0x85a3, 0x0000, 0x0000, 0x8a2e, 0x0370, 0x7334)
+        );
     }
 
     #[test]
     fn test_to_string() {
-        let data = AaaaData::new(Ipv6Addr::new(0x2001, 0x0db8, 0x85a3, 0x0000, 0x0000, 0x8a2e, 0x0370, 0x7334));
+        let data = AaaaData::new(Ipv6Addr::new(
+            0x2001, 0x0db8, 0x85a3, 0x0000, 0x0000, 0x8a2e, 0x0370, 0x7334,
+        ));
         assert_eq!(data.to_string(), "2001:db8:85a3::8a2e:370:7334");
     }
 }

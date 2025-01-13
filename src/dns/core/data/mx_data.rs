@@ -50,7 +50,6 @@ impl FromStr for MxData {
             .parse()
             .map_err(MxDataFromStrErr::ExchangeFromStrErr)?;
         Ok(Self::new(preference, exchange))
-
     }
 }
 
