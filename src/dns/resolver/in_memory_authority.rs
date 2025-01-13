@@ -160,24 +160,9 @@ mod test {
     #[tokio::test]
     async fn test_resolve_aname() {
         let records = vec![
-            Record::new(
-                "example.com".parse().unwrap(),
-                "IN".parse().unwrap(),
-                0,
-                Data::A("127.0.0.1".parse().unwrap()),
-            ),
-            Record::new(
-                "example.com".parse().unwrap(),
-                "IN".parse().unwrap(),
-                0,
-                Data::A("127.0.0.2".parse().unwrap()),
-            ),
-            Record::new(
-                "not-example.com".parse().unwrap(),
-                "IN".parse().unwrap(),
-                0,
-                Data::A("127.0.0.3".parse().unwrap()),
-            ),
+            "example.com 0 IN A 127.0.0.1".parse().unwrap(),
+            "example.com 0 IN A 127.0.0.2".parse().unwrap(),
+            "not-example.com 0 IN A 127.0.0.3".parse().unwrap(),
         ];
         let question = "example.com IN A".parse().unwrap();
         let request = query_message_from_question(question);
@@ -193,20 +178,10 @@ mod test {
 
     #[tokio::test]
     async fn test_resolve_aname_with_cname() {
-        let cname_record = Record::new(
-            "example.com".parse().unwrap(),
-            "IN".parse().unwrap(),
-            0,
-            Data::Cname("a.example.com".parse().unwrap()),
-        );
-        let a_record = Record::new(
-            "a.example.com".parse().unwrap(),
-            "IN".parse().unwrap(),
-            0,
-            Data::A("127.0.0.1".parse().unwrap()),
-        );
+        let cname_record: Record = "example.com. 0 IN CNAME a.example.com".parse().unwrap();
+        let a_record: Record = "a.example.com. 0 IN A 127.0.0.1".parse().unwrap();
         let records = vec![cname_record.clone(), a_record.clone()];
-        let question = "example.com IN A".parse().unwrap();
+        let question = "example.com. IN A".parse().unwrap();
         let request = query_message_from_question(question);
         let response = InMemoryAuthority::new(records).resolve(&request).await;
         assert_eq!(response.answers().len(), 2);
@@ -220,91 +195,24 @@ mod test {
     /// C.ISI.EDU name server https://datatracker.ietf.org/doc/html/rfc1034#section-6.1
     fn c_isi_edu_zone() -> InMemoryAuthority {
         let records = vec![
-            Record::new(
-                "C.ISI.EDU.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                604800,
-                Data::Ns("A.ISI.EDU.".parse().unwrap()),
-            ),
-            Record::new(
-                "C.ISI.EDU.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                604800,
-                Data::Ns("C.ISI.EDU.".parse().unwrap()),
-            ),
-            Record::new(
-                "C.ISI.EDU.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                604800,
-                Data::Ns("C.ISI.EDU.".parse().unwrap()),
-            ),
-            Record::new(
-                "C.ISI.EDU.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                604800,
-                Data::Ns("SRI-NIC.ARPA.".parse().unwrap()),
-            ),
-            Record::new(
-                "MIL.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::Ns("SRI-NIC.ARPA.".parse().unwrap()),
-            ),
-            Record::new(
-                "MIL.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::Ns("A.ISI.EDU.".parse().unwrap()),
-            ),
-            Record::new(
-                "EDU.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::Ns("SRI-NIC.ARPA.".parse().unwrap()),
-            ),
-            Record::new(
-                "EDU.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::Ns("C.ISI.EDU.".parse().unwrap()),
-            ),
-            Record::new(
-                "SRI-NIC.ARPA.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::A("26.0.0.73".parse().unwrap()),
-            ),
-            Record::new(
-                "SRI-NIC.ARPA.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::A("10.0.0.51".parse().unwrap()),
-            ),
-            Record::new(
-                "SRI-NIC.ARPA.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::Mx("0 SRI-NIC.ARPA.".parse().unwrap()),
-            ),
-            Record::new(
-                "USC-ISIC.ARPA.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::Cname("C.ISI.EDU.".parse().unwrap()),
-            ),
-            Record::new(
-                "A.ISI.EDU.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::A("26.3.0.103".parse().unwrap()),
-            ),
-            Record::new(
-                "C.ISI.EDU.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::A("10.0.0.52".parse().unwrap()),
-            ),
-        ];
+            "C.ISI.EDU. 604800 IN NS A.ISI.EDU.",
+            "C.ISI.EDU. 604800 IN NS C.ISI.EDU.",
+            "C.ISI.EDU. 604800 IN NS C.ISI.EDU.",
+            "C.ISI.EDU. 604800 IN NS SRI-NIC.ARPA.",
+            "MIL. 86400 IN NS SRI-NIC.ARPA.",
+            "MIL. 86400 IN NS A.ISI.EDU.",
+            "EDU. 86400 IN NS SRI-NIC.ARPA.",
+            "EDU. 86400 IN NS C.ISI.EDU.",
+            "SRI-NIC.ARPA. 86400 IN A 26.0.0.73",
+            "SRI-NIC.ARPA. 86400 IN A 10.0.0.51",
+            "SRI-NIC.ARPA. 86400 IN MX 0 SRI-NIC.ARPA.",
+            "USC-ISIC.ARPA. 86400 IN CNAME C.ISI.EDU.",
+            "A.ISI.EDU. 86400 IN A 26.3.0.103",
+            "C.ISI.EDU. 86400 IN A 10.0.0.52",
+        ]
+        .into_iter()
+        .map(|record| record.parse().unwrap())
+        .collect();
         InMemoryAuthority::new(records)
     }
 
@@ -316,18 +224,8 @@ mod test {
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 2);
         let expected_answers = vec![
-            Record::new(
-                "SRI-NIC.ARPA.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::A("26.0.0.73".parse().unwrap()),
-            ),
-            Record::new(
-                "SRI-NIC.ARPA.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::A("10.0.0.51".parse().unwrap()),
-            ),
+            "SRI-NIC.ARPA. 86400 IN A 26.0.0.73".parse().unwrap(),
+            "SRI-NIC.ARPA. 86400 IN A 10.0.0.51".parse().unwrap(),
         ];
         response.answers().iter().for_each(|record| {
             assert!(expected_answers.contains(record));
@@ -342,24 +240,9 @@ mod test {
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 3);
         let expected_answers = vec![
-            Record::new(
-                "SRI-NIC.ARPA.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::A("26.0.0.73".parse().unwrap()),
-            ),
-            Record::new(
-                "SRI-NIC.ARPA.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::A("10.0.0.51".parse().unwrap()),
-            ),
-            Record::new(
-                "SRI-NIC.ARPA.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::Mx("0 SRI-NIC.ARPA.".parse().unwrap()),
-            ),
+            "SRI-NIC.ARPA. 86400 IN A 26.0.0.73".parse().unwrap(),
+            "SRI-NIC.ARPA. 86400 IN A 10.0.0.51".parse().unwrap(),
+            "SRI-NIC.ARPA. 86400 IN MX 0 SRI-NIC.ARPA.".parse().unwrap(),
         ];
         response.answers().iter().for_each(|record| {
             assert!(expected_answers.contains(record));
@@ -373,12 +256,7 @@ mod test {
         let request = query_message_from_question("SRI-NIC.ARPA. IN MX".parse().unwrap());
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 1);
-        let expected_answers = vec![Record::new(
-            "SRI-NIC.ARPA.".parse().unwrap(),
-            "IN".parse().unwrap(),
-            86400,
-            Data::Mx("0 sri-nic.arpa".parse().unwrap()),
-        )];
+        let expected_answers = vec!["SRI-NIC.ARPA. 86400 IN MX 0 sri-nic.arpa".parse().unwrap()];
         response.answers().iter().for_each(|record| {
             assert!(expected_answers.contains(record));
         });
@@ -409,45 +287,24 @@ mod test {
         assert_eq!(response.answers().len(), 0);
         assert_eq!(response.authorities().len(), 2);
         let expected_authorities = vec![
-            Record::new(
-                "MIL.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::Ns("SRI-NIC.ARPA.".parse().unwrap()),
-            ),
-            Record::new(
-                "MIL.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::Ns("A.ISI.EDU.".parse().unwrap()),
-            ),
+            "MIL. 86400 IN NS SRI-NIC.ARPA.".parse().unwrap(),
+            "MIL. 86400 IN NS A.ISI.EDU.".parse().unwrap(),
         ];
         response.answers().iter().for_each(|record| {
             assert!(expected_authorities.contains(record));
         });
         assert_eq!(response.additional().len(), 3);
         let expected_additional = vec![
-            Record::new(
-                "A.ISI.EDU.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::A("26.3.0.103".parse().unwrap()),
-            ),
-            Record::new(
-                "SRI-NIC.ARPA.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::A("26.0.0.73".parse().unwrap()),
-            ),
-            Record::new(
-                "SRI-NIC.ARPA.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::A("10.0.0.51".parse().unwrap()),
-            ),
+            "A.ISI.EDU. 86400 IN A 26.3.0.103".parse().unwrap(),
+            "SRI-NIC.ARPA. 86400 IN A 26.0.0.73".parse().unwrap(),
+            "SRI-NIC.ARPA. 86400 IN A 10.0.0.51".parse().unwrap(),
         ];
         response.additional().iter().for_each(|record| {
-            assert!(expected_additional.contains(record));
+            assert!(
+                expected_additional.contains(record),
+                "{:?} not in expected_additional",
+                record.to_string()
+            );
         });
     }
 
@@ -459,18 +316,8 @@ mod test {
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 2);
         let expected_answers = vec![
-            Record::new(
-                "USC-ISIC.ARPA.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::Cname("C.ISI.EDU.".parse().unwrap()),
-            ),
-            Record::new(
-                "C.ISI.EDU.".parse().unwrap(),
-                "IN".parse().unwrap(),
-                86400,
-                Data::A("10.0.0.52".parse().unwrap()),
-            ),
+            "USC-ISIC.ARPA. 86400 IN CNAME C.ISI.EDU.".parse().unwrap(),
+            "C.ISI.EDU. 86400 IN A 10.0.0.52".parse().unwrap(),
         ];
         response.answers().iter().for_each(|record| {
             assert!(expected_answers.contains(record));
@@ -484,12 +331,7 @@ mod test {
         let request = query_message_from_question("USC-ISIC.ARPA. IN CNAME".parse().unwrap());
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 1);
-        let expected_answers = vec![Record::new(
-            "USC-ISIC.ARPA.".parse().unwrap(),
-            "IN".parse().unwrap(),
-            86400,
-            Data::Cname("C.ISI.EDU.".parse().unwrap()),
-        )];
+        let expected_answers = vec!["USC-ISIC.ARPA. 86400 IN CNAME C.ISI.EDU.".parse().unwrap()];
         response.answers().iter().for_each(|record| {
             assert!(expected_answers.contains(record));
         });

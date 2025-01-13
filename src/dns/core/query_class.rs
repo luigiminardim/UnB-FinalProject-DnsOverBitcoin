@@ -85,7 +85,10 @@ mod test {
         assert!(QueryClass::from_str("INVALID").is_err());
 
         // valid
-        assert_eq!(QueryClass::from_str("IN").unwrap(), QueryClass::Class(Class::In));
+        assert_eq!(
+            QueryClass::from_str("IN").unwrap(),
+            QueryClass::Class(Class::In)
+        );
         assert_eq!(QueryClass::from_str("*").unwrap(), QueryClass::Any);
     }
 
