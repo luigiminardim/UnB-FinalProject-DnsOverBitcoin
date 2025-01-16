@@ -77,16 +77,17 @@ impl Name {
 pub enum NameFromStrErr {
     NameErr(NameErr),
     LabelFromStrErr(LabelFromStrErr),
+    RelativeName,
 }
 
 impl FromStr for Name {
     type Err = NameFromStrErr;
 
     fn from_str(str: &str) -> Result<Self, Self::Err> {
-        // remove the trailing dot if it exists
+        // remove the trailing dot if it exists or return an error
         let str = match str.chars().last() {
             Some('.') => &str[..str.len() - 1],
-            _ => str,
+            _ => return Err(NameFromStrErr::RelativeName),
         };
         if let "" = str {
             return Ok(Name::root());
@@ -168,25 +169,25 @@ mod tests {
 
     #[test]
     fn test_domain_from_str() {
-        // "" is a valid domain name
-        let domain: Name = "".parse().unwrap();
-        assert_eq!(domain.to_string(), ".");
+        // "" is an invalid domain name
+        let domain = "".parse::<Name>();
+        assert!(domain.is_err(), ".");
 
         // "." is a valid domain name
         let domain: Name = ".".parse().unwrap();
         assert_eq!(domain.to_string(), ".");
 
-        // "example" is a valid domain name
-        let domain: Name = "example".parse().unwrap();
-        assert_eq!(domain.to_string(), "example.");
+        // "example" is a invalid domain name
+        let domain = "example".parse::<Name>();
+        assert!(domain.is_err());
 
         // "example." is a valid domain name
         let domain: Name = "example.".parse().unwrap();
         assert_eq!(domain.to_string(), "example.");
 
-        // "example.com" is a valid domain name
-        let domain: Name = "example.com".parse().unwrap();
-        assert_eq!(domain.to_string(), "example.com.");
+        // "example.com" is an invalid domain name
+        let domain= "example.com".parse::<Name>();
+        assert!(domain.is_err());
 
         // "example.com." is a valid domain name
         let domain: Name = "example.com.".parse().unwrap();
@@ -194,7 +195,7 @@ mod tests {
 
         // domains with more than 63 characters in a label are invalid
         let domain: Result<Name, NameFromStrErr> =
-            "a-64-character-long-label----------------------------is-too-long".parse();
+            "a-64-character-long-label----------------------------is-too-long.".parse();
         assert_eq!(
             domain.unwrap_err(),
             NameFromStrErr::LabelFromStrErr(LabelFromStrErr::LenLimit)
@@ -203,11 +204,6 @@ mod tests {
 
     #[test]
     fn test_is_root() {
-        // "" should be a root domain name
-        let name: Name = "".parse().unwrap();
-        assert_eq!(name.to_string(), ".");
-        assert!(name.is_root());
-
         // "." should be a root domain name
         let name: Name = ".".parse().unwrap();
         assert_eq!(name.to_string(), ".");
@@ -254,14 +250,14 @@ mod tests {
 
     #[test]
     fn test_suffix_names() {
-        let name = "www.example.com".parse::<Name>().unwrap();
+        let name = "www.example.com.".parse::<Name>().unwrap();
         assert_eq!(
             name.suffix_names(),
             vec![
-                "www.example.com".parse::<Name>().unwrap(),
-                "example.com".parse::<Name>().unwrap(),
-                "com".parse::<Name>().unwrap(),
-                "".parse::<Name>().unwrap(),
+                "www.example.com.".parse::<Name>().unwrap(),
+                "example.com.".parse::<Name>().unwrap(),
+                "com.".parse::<Name>().unwrap(),
+                ".".parse::<Name>().unwrap(),
             ]
         );
     }

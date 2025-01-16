@@ -81,12 +81,12 @@ mod test {
     fn test_matches() {
         // matches all
         let question = Question::new(
-            "example.com".parse().unwrap(),
+            "example.com.".parse().unwrap(),
             QueryType::Type(RecordType::A),
             QueryClass::Class(Class::In),
         );
         let record = Record::new(
-            "example.com".parse().unwrap(),
+            "example.com.".parse().unwrap(),
             Class::In,
             0,
             Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 1))),
@@ -95,12 +95,12 @@ mod test {
 
         // matches with ANY type and ANY class
         let question = Question::new(
-            "example.com".parse().unwrap(),
+            "example.com.".parse().unwrap(),
             QueryType::Any,
             QueryClass::Any,
         );
         let record = Record::new(
-            "example.com".parse().unwrap(),
+            "example.com.".parse().unwrap(),
             Class::In,
             0,
             Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 1))),
@@ -109,12 +109,12 @@ mod test {
 
         // not match name
         let question = Question::new(
-            "example.com".parse().unwrap(),
+            "example.com.".parse().unwrap(),
             QueryType::Type(RecordType::A),
             QueryClass::Class(Class::In),
         );
         let record = Record::new(
-            "com".parse().unwrap(),
+            "com.".parse().unwrap(),
             Class::In,
             0,
             Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 1))),
@@ -123,12 +123,12 @@ mod test {
 
         // not match type
         let question = Question::new(
-            "example.com".parse().unwrap(),
+            "example.com.".parse().unwrap(),
             QueryType::Type(RecordType::Cname),
             QueryClass::Class(Class::In),
         );
         let record = Record::new(
-            "example.com".parse().unwrap(),
+            "example.com.".parse().unwrap(),
             Class::In,
             0,
             Data::A(AData::new(Ipv4Addr::new(127, 0, 0, 1))),
@@ -139,22 +139,22 @@ mod test {
     #[test]
     fn test_from_str() {
         // valid "example.com IN A"
-        let question = "example.com IN A".parse::<Question>().unwrap();
+        let question = "example.com. IN A".parse::<Question>().unwrap();
         assert_eq!(
             question,
             Question::new(
-                "example.com".parse().unwrap(),
+                "example.com.".parse().unwrap(),
                 QueryType::Type(RecordType::A),
                 QueryClass::Class(Class::In)
             )
         );
 
         // valid "example.com IN ANY"
-        let question = "example.com IN *".parse::<Question>().unwrap();
+        let question = "example.com. IN *".parse::<Question>().unwrap();
         assert_eq!(
             question,
             Question::new(
-                "example.com".parse().unwrap(),
+                "example.com.".parse().unwrap(),
                 QueryType::Any,
                 QueryClass::Class(Class::In)
             )

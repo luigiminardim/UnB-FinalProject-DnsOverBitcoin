@@ -253,7 +253,7 @@ mod test_name {
         let mut buffer = DatagramReader::new(&datagram);
         let name = Name::read(&mut buffer).unwrap();
         assert_eq!(buffer.pos, 5);
-        assert_eq!(name, "foo".parse().unwrap());
+        assert_eq!(name, "foo.".parse().unwrap());
     }
 
     #[test]
@@ -266,7 +266,7 @@ mod test_name {
         let mut reader = DatagramReader::new(&buffer);
         let name = Name::read(&mut reader).unwrap();
         assert_eq!(reader.pos, 9);
-        assert_eq!(name, "foo.bar".parse().unwrap());
+        assert_eq!(name, "foo.bar.".parse().unwrap());
     }
 
     #[test]
@@ -315,7 +315,7 @@ mod test_name {
 
     #[test]
     fn test_write_simple() {
-        let name = "foo".parse::<Name>().unwrap();
+        let name = "foo.".parse::<Name>().unwrap();
         let mut buffer = [0; UDP_LENGTH_LIMIT];
         let mut writer = DatagramWriter::new(&mut buffer);
         name.write(&mut writer).unwrap();
@@ -325,7 +325,7 @@ mod test_name {
 
     #[test]
     fn test_write_double() {
-        let name = "foo.bar".parse::<Name>().unwrap();
+        let name = "foo.bar.".parse::<Name>().unwrap();
         let mut buffer = [0; UDP_LENGTH_LIMIT];
         let mut writer = DatagramWriter::new(&mut buffer);
         name.write(&mut writer).unwrap();

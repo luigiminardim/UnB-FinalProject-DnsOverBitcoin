@@ -160,16 +160,16 @@ mod test {
     #[tokio::test]
     async fn test_resolve_aname() {
         let records = vec![
-            "example.com 0 IN A 127.0.0.1".parse().unwrap(),
-            "example.com 0 IN A 127.0.0.2".parse().unwrap(),
-            "not-example.com 0 IN A 127.0.0.3".parse().unwrap(),
+            "example.com. 0 IN A 127.0.0.1".parse().unwrap(),
+            "example.com. 0 IN A 127.0.0.2".parse().unwrap(),
+            "not-example.com. 0 IN A 127.0.0.3".parse().unwrap(),
         ];
-        let question = "example.com IN A".parse().unwrap();
+        let question = "example.com. IN A".parse().unwrap();
         let request = query_message_from_question(question);
         let response = InMemoryAuthority::new(records).resolve(&request).await;
         assert_eq!(response.answers().len(), 2);
         response.answers().iter().for_each(|record| {
-            assert_eq!(record.name(), &"example.com".parse().unwrap());
+            assert_eq!(record.name(), &"example.com.".parse().unwrap());
             assert_eq!(record.class(), Class::In);
             assert_eq!(record.ttl(), 0);
             assert!(matches!(record.data(), Data::A(_)));
@@ -178,7 +178,7 @@ mod test {
 
     #[tokio::test]
     async fn test_resolve_aname_with_cname() {
-        let cname_record: Record = "example.com. 0 IN CNAME a.example.com".parse().unwrap();
+        let cname_record: Record = "example.com. 0 IN CNAME a.example.com.".parse().unwrap();
         let a_record: Record = "a.example.com. 0 IN A 127.0.0.1".parse().unwrap();
         let records = vec![cname_record.clone(), a_record.clone()];
         let question = "example.com. IN A".parse().unwrap();
@@ -256,7 +256,7 @@ mod test {
         let request = query_message_from_question("SRI-NIC.ARPA. IN MX".parse().unwrap());
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 1);
-        let expected_answers = vec!["SRI-NIC.ARPA. 86400 IN MX 0 sri-nic.arpa".parse().unwrap()];
+        let expected_answers = vec!["SRI-NIC.ARPA. 86400 IN MX 0 sri-nic.arpa.".parse().unwrap()];
         response.answers().iter().for_each(|record| {
             assert!(expected_answers.contains(record));
         });
@@ -312,7 +312,7 @@ mod test {
     #[tokio::test]
     async fn test_section_6_2_7() {
         let authority = c_isi_edu_zone();
-        let request = query_message_from_question("USC-ISIC.ARPA IN A".parse().unwrap());
+        let request = query_message_from_question("USC-ISIC.ARPA. IN A".parse().unwrap());
         let response = authority.resolve(&request).await;
         assert_eq!(response.answers().len(), 2);
         let expected_answers = vec![
