@@ -3,17 +3,32 @@ use std::{
     str::{Chars, FromStr},
 };
 
-use super::{Class, Record, Ttl};
+use super::{Class, Name, Record, Ttl};
+
+pub struct ZoneFile {
+    records: Vec<Record>,
+}
+
+impl ZoneFile {
+    pub fn records(&self) -> &[Record] {
+        &self.records
+    }
+
+    pub fn from_str(s: &str, origin: &Name) -> Self {
+        let records = parse_str(s, origin);
+        Self { records }
+    }
+}
 
 // TODO: Use parser combinator or bnfc
-pub fn parse_str(input: &str) -> Vec<Record> {
+fn parse_str(input: &str, origin: &Name) -> Vec<Record> {
     let input = &remove_comments(input);
     let input = &remove_parentesis(input);
     let input = remove_white_space(input);
     let mut records = Vec::new();
     for line in input.lines() {
         let last_record = records.last();
-        let record = parse_record(line, last_record);
+        let record = parse_record(line, last_record, origin);
         match record {
             Some(record) => {
                 records.push(record);
@@ -129,7 +144,7 @@ fn consume_quoted_string(iter: &mut Peekable<Chars>) -> Option<String> {
     Some(result)
 }
 
-fn parse_record(line: &str, last_record: Option<&Record>) -> Option<Record> {
+fn parse_record(line: &str, last_record: Option<&Record>, origin: &Name) -> Option<Record> {
     let (domain_name_part, rr_part) = line.split_once(' ')?;
     let domain_name_part = if domain_name_part.is_empty() {
         last_record
@@ -140,7 +155,7 @@ fn parse_record(line: &str, last_record: Option<&Record>) -> Option<Record> {
     }?;
     let (ttl, class, rest) = separate_rr_fields(rr_part, last_record)?;
     let input = format!("{} {} {} {}", domain_name_part, ttl, class, rest);
-    Record::from_str(&input).ok()
+    Record::from_str_relative(&input, origin).ok()
 }
 
 /// Return (ttl, class, ...rest)
@@ -194,7 +209,12 @@ fn separate_rr_fields(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::LazyLock;
+
     use super::*;
+
+    static ORIGIN: LazyLock<Name> =
+        std::sync::LazyLock::new(|| Name::from_str("example.com.").unwrap());
 
     #[test]
     fn a() {
@@ -209,7 +229,7 @@ mod tests {
         // single line
         let input = "example.com. 0 IN A 127.0.0.1";
         let expected: Vec<Record> = vec!["example.com. 0 IN A 127.0.0.1".parse().unwrap()];
-        let output = parse_str(input);
+        let output = parse_str(input, &ORIGIN);
         assert_eq!(expected, output);
 
         // multi line
@@ -218,7 +238,7 @@ mod tests {
             "example.com. 0 IN A 127.0.0.1".parse().unwrap(),
             "example.com. 0 IN CNAME cname.com.".parse().unwrap(),
         ];
-        let output = parse_str(input);
+        let output = parse_str(input, &ORIGIN);
         assert_eq!(expected, output);
 
         // multi line with invalid line
@@ -231,7 +251,7 @@ example.com. 0 IN CNAME cname.com.
             "example.com. 0 IN A 127.0.0.1".parse().unwrap(),
             "example.com. 0 IN CNAME cname.com.".parse().unwrap(),
         ];
-        let output = parse_str(input);
+        let output = parse_str(input, &ORIGIN);
         assert_eq!(expected, output);
     }
 
@@ -242,7 +262,7 @@ example.com. 0 IN CNAME cname.com.
             "example.com. 0 IN A 127.0.0.1".parse().unwrap(),
             "example.com. 0 IN CNAME cname.com.".parse().unwrap(),
         ];
-        let output = parse_str(input);
+        let output = parse_str(input, &ORIGIN);
         assert_eq!(expected, output);
     }
 
@@ -253,7 +273,7 @@ example.com. 0 IN TXT "Hello, World!"
 "#;
         let expected: Vec<Record> =
             vec!["example.com. 0 IN TXT \"Hello, World!\"".parse().unwrap()];
-        let output = parse_str(input);
+        let output = parse_str(input, &ORIGIN);
         assert_eq!(expected, output);
     }
 
@@ -279,7 +299,7 @@ example.com. 0 (
             "example.com. 0 IN CNAME cname.com.".parse().unwrap(),
             "example.com. 0 IN TXT \"Hello, World!\"".parse().unwrap(),
         ];
-        let output = parse_str(input);
+        let output = parse_str(input, &ORIGIN);
         assert_eq!(expected, output);
     }
 
@@ -306,7 +326,7 @@ example.com. 0 (
             "example.com. 0 IN CNAME cname.com.".parse().unwrap(),
             "example.com. 0 IN TXT \"Hello; World!\"".parse().unwrap(),
         ];
-        let output = parse_str(input);
+        let output = parse_str(input, &ORIGIN);
         assert_eq!(expected, output);
     }
 
@@ -322,7 +342,7 @@ example.com.    0 IN A 127.0.0.1
             "example.com. 0 IN CNAME cname.com.".parse().unwrap(),
             "example.com. 0 IN TXT \"Hello, World!\"".parse().unwrap(),
         ];
-        let output = parse_str(input);
+        let output = parse_str(input, &ORIGIN);
         assert_eq!(expected, output);
     }
 
@@ -370,7 +390,7 @@ example.com.                                A 0.1.0.0
         .iter()
         .map(|s| Record::from_str(s).unwrap())
         .collect();
-        let output = parse_str(input);
+        let output = parse_str(input, &ORIGIN);
         expected
             .iter()
             .zip(output.iter())
@@ -382,5 +402,19 @@ example.com.                                A 0.1.0.0
                     expected.to_string(),
                 );
             });
+    }
+
+    #[test]
+    fn test_relative_domain_name() {
+        let input = r#"
+a 0 IN A 127.0.0.1
+@ 0 IN A 127.0.0.2
+"#;
+        let expected: Vec<Record> = vec![
+            "a.example.com. 0 IN A 127.0.0.1".parse().unwrap(),
+            "example.com. 0 IN A 127.0.0.2".parse().unwrap(),
+        ];
+        let output = parse_str(input, &ORIGIN);
+        assert_eq!(expected, output);
     }
 }

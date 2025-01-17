@@ -15,6 +15,10 @@ impl CnameData {
     pub fn cname(&self) -> &Name {
         &self.cname
     }
+
+    pub fn from_str_relative(s: &str, origin: &Name) -> Result<Self, CnameDataFromStrErr> {
+        Ok(Self::new(Name::from_str_relative(s, &origin).map_err(CnameDataFromStrErr::NameFromStrErr)?))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

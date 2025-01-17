@@ -28,6 +28,17 @@ impl MxData {
     pub fn exchange(&self) -> &Name {
         &self.exchange
     }
+
+    pub fn from_str_relative(s: &str, origin: &Name) -> Result<Self, MxDataFromStrErr> {
+        let (preference_str, exchange_str) =
+            s.split_once(' ').ok_or(MxDataFromStrErr::InvalidFormat)?;
+        let preference = preference_str
+            .parse()
+            .map_err(MxDataFromStrErr::PreferenceFromStrErr)?;
+        let exchange = Name::from_str_relative(exchange_str, origin)
+            .map_err(MxDataFromStrErr::ExchangeFromStrErr)?;
+        Ok(Self::new(preference, exchange))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

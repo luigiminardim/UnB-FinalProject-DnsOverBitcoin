@@ -15,6 +15,10 @@ impl NsData {
     pub fn name_server(&self) -> &Name {
         &self.name_server
     }
+
+    pub fn from_str_relative(s: &str, origin: &Name) -> Result<Self, NsDataFromStrErr> {
+        Ok(Self::new(Name::from_str_relative(s, &origin).map_err(NsDataFromStrErr::NameFromStrErr)?))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,6 +32,8 @@ impl FromStr for NsData {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self::new(s.parse().map_err(Self::Err::NameFromStrErr)?))
     }
+
+
 }
 
 impl ToString for NsData {

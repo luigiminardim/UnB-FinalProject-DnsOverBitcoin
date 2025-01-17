@@ -71,6 +71,20 @@ impl Name {
             .chain(std::iter::once(Name::root()))
             .collect()
     }
+
+    /// Create a domain name from a string representation of a domain name.
+    /// String representations that doesn't end with are interpreted as relative
+    /// domain names to the given origin domain name.
+    pub fn from_str_relative(str: &str, origin: &Name) -> Result<Self, NameFromStrErr> {
+        if str == "@" {
+            return Ok(origin.clone());
+        }
+        let absolute_str = match str.chars().last() {
+            Some('.') => str.into(),
+            _ => format!("{}.{}", str, origin.to_string()),
+        };
+        absolute_str.parse()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -186,7 +200,7 @@ mod tests {
         assert_eq!(domain.to_string(), "example.");
 
         // "example.com" is an invalid domain name
-        let domain= "example.com".parse::<Name>();
+        let domain = "example.com".parse::<Name>();
         assert!(domain.is_err());
 
         // "example.com." is a valid domain name
@@ -260,5 +274,22 @@ mod tests {
                 ".".parse::<Name>().unwrap(),
             ]
         );
+    }
+
+    #[test]
+    fn test_from_str_relative() {
+        let origin = "example.com.".parse::<Name>().unwrap();
+        assert_eq!(
+            Name::from_str_relative("www", &origin).unwrap(),
+            "www.example.com.".parse::<Name>().unwrap()
+        );
+        assert_eq!(
+            Name::from_str_relative("www.example.com.", &origin).unwrap(),
+            "www.example.com.".parse::<Name>().unwrap()
+        );
+        assert_eq!(
+            Name::from_str_relative("@", &origin).unwrap(),
+            "example.com.".parse::<Name>().unwrap()
+        )
     }
 }

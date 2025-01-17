@@ -48,6 +48,34 @@ impl Record {
     pub fn data(&self) -> &Data {
         &self.data
     }
+
+    pub fn from_str_relative(s: &str, origin: &Name) -> Result<Self, RecordFromStrErr> {
+        let (name_str, s) = s.split_once(' ').ok_or(RecordFromStrErr::Invalid)?;
+        let (ttl_str, s) = s.split_once(' ').ok_or(RecordFromStrErr::Invalid)?;
+        let (class_str, s) = s.split_once(' ').ok_or(RecordFromStrErr::Invalid)?;
+        let (record_type_str, data_str) = s.split_once(' ').ok_or(RecordFromStrErr::Invalid)?;
+        let name = Name::from_str_relative(name_str, origin).map_err(RecordFromStrErr::NameErr)?;
+        let ttl = ttl_str.parse().map_err(RecordFromStrErr::TtlErr)?;
+        let class = Class::from_str(class_str).map_err(RecordFromStrErr::ClassErr)?;
+        let record_type =
+            RecordType::from_str(record_type_str).map_err(RecordFromStrErr::RecordTypeErr)?;
+        let data = match record_type {
+            RecordType::A => Data::A(data_str.parse().map_err(RecordFromStrErr::ADataErr)?),
+            RecordType::Ns => Data::Ns(
+                NsData::from_str_relative(data_str, origin).map_err(RecordFromStrErr::NsDataErr)?,
+            ),
+            RecordType::Cname => {
+                Data::Cname(CnameData::from_str_relative(data_str, &origin).map_err(RecordFromStrErr::CnameDataErr)?)
+            }
+            RecordType::Aaaa => {
+                Data::Aaaa(data_str.parse().map_err(RecordFromStrErr::AaaaDataErr)?)
+            }
+            RecordType::Mx => Data::Mx(MxData::from_str_relative(data_str, &origin).map_err(RecordFromStrErr::MxDataErr)?),
+            RecordType::Txt => Data::Txt(data_str.parse().map_err(RecordFromStrErr::TxtDataErr)?),
+            RecordType::Unknown(_) => Err(RecordFromStrErr::Invalid)?,
+        };
+        Ok(Record::new(name, class, ttl, data))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -211,5 +239,133 @@ mod tests {
         );
         let expected = "example.com. 3600 IN CNAME cname.example.com.".to_string();
         assert_eq!(record.to_string(), expected);
+    }
+
+    #[test]
+    fn test_record_from_str_relative() {
+        let origin = "com.".parse::<Name>().unwrap();
+
+        // "example.com. 3600 IN A 127.0.0.1"
+        let record =
+            Record::from_str_relative("example.com. 3600 IN A 127.0.0.1", &origin).unwrap();
+        let expected = Record::new(
+            "example.com.".parse().unwrap(),
+            Class::In,
+            3600,
+            Data::A("127.0.0.1".parse().unwrap()),
+        );
+        assert_eq!(record, expected);
+
+        // "example 3600 IN A 127.0.0.1"
+        let record = Record::from_str_relative("example 3600 IN A 127.0.0.1", &origin).unwrap();
+        let expected = Record::new(
+            "example.com.".parse().unwrap(),
+            Class::In,
+            3600,
+            Data::A("127.0.0.1".parse().unwrap()),
+        );
+        assert_eq!(record, expected);
+
+        // "example.com. 3600 IN NS ns.example.com."
+        let record =
+            Record::from_str_relative("example.com. 3600 IN NS ns.example.com.", &origin).unwrap();
+        let expected = Record::new(
+            "example.com.".parse().unwrap(),
+            Class::In,
+            3600,
+            Data::Ns("ns.example.com.".parse().unwrap()),
+        );
+        assert_eq!(record, expected);
+
+        // "example 3600 IN NS ns"
+        let record = Record::from_str_relative("example 3600 IN NS ns.example", &origin).unwrap();
+        let expected = Record::new(
+            "example.com.".parse().unwrap(),
+            Class::In,
+            3600,
+            Data::Ns("ns.example.com.".parse().unwrap()),
+        );
+        assert_eq!(record, expected);
+
+        // "example.com. 3600 IN CNAME cname.example.com."
+        let record = Record::from_str_relative("example.com. 3600 IN CNAME cname.example.com.", &origin).unwrap();
+        let expected = Record::new(
+            "example.com.".parse().unwrap(),
+            Class::In,
+            3600,
+            Data::Cname("cname.example.com.".parse().unwrap()),
+        );
+        assert_eq!(record, expected);
+
+        // "example 3600 IN CNAME cname.example"
+        let record =
+            Record::from_str_relative("example 3600 IN CNAME cname.example", &origin).unwrap();
+        let expected = Record::new(
+            "example.com.".parse().unwrap(),
+            Class::In,
+            3600,
+            Data::Cname("cname.example.com.".parse().unwrap()),
+        );
+        assert_eq!(record, expected);
+
+        // "example.com. 3600 IN AAAA ::1"
+        let record = Record::from_str_relative("example.com. 3600 IN AAAA ::1", &origin).unwrap();
+        let expected = Record::new(
+            "example.com.".parse().unwrap(),
+            Class::In,
+            3600,
+            Data::Aaaa("::1".parse().unwrap()),
+        );
+        assert_eq!(record, expected);
+
+        // "example 3600 IN AAAA ::1"
+        let record = Record::from_str_relative("example 3600 IN AAAA ::1", &origin).unwrap();
+        let expected = Record::new(
+            "example.com.".parse().unwrap(),
+            Class::In,
+            3600,
+            Data::Aaaa("::1".parse().unwrap()),
+        );
+        assert_eq!(record, expected);
+
+        // "example.com. 3600 IN MX 10 mail.example.com."
+        let record = Record::from_str_relative("example.com. 3600 IN MX 10 mail.example.com.", &origin).unwrap();
+        let expected = Record::new(
+            "example.com.".parse().unwrap(),
+            Class::In,
+            3600,
+            Data::Mx(MxData::new(10, "mail.example.com.".parse().unwrap())),
+        );
+        assert_eq!(record, expected);
+
+        // "example 3600 IN MX 10 mail.example"
+        let record = Record::from_str_relative("example 3600 IN MX 10 mail.example", &origin).unwrap();
+        let expected = Record::new(
+            "example.com.".parse().unwrap(),
+            Class::In,
+            3600,
+            Data::Mx(MxData::new(10, "mail.example.com.".parse().unwrap())),
+        );
+        assert_eq!(record, expected);
+
+        // "example.com. 3600 IN TXT \"Hello, world!\""
+        let record = Record::from_str_relative("example.com. 3600 IN TXT \"Hello, world!\"", &origin).unwrap();
+        let expected = Record::new(
+            "example.com.".parse().unwrap(),
+            Class::In,
+            3600,
+            Data::Txt(TxtData::new("Hello, world!".to_string())),
+        );
+        assert_eq!(record, expected);
+
+        // "example 3600 IN TXT \"Hello, world!\""
+        let record = Record::from_str_relative("example 3600 IN TXT \"Hello, world!\"", &origin).unwrap();
+        let expected = Record::new(
+            "example.com.".parse().unwrap(),
+            Class::In,
+            3600,
+            Data::Txt(TxtData::new("Hello, world!".to_string())),
+        );
+        assert_eq!(record, expected);
     }
 }
