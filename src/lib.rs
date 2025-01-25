@@ -1,1 +1,1 @@
-pub mod dns;
+pub mod nostr_authority;
