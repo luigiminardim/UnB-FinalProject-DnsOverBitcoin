@@ -1,0 +1,14 @@
+services:
+  bitcoin-core:
+    build: 
+      context: ./regtest_node
+      dockerfile: Dockerfile
+    ports:
+      - 18443:18443 # RPC
+      - 18444:18444 # P2P
+    volumes:
+      - bitcoin-core:/root/.bitcoin
+
+volumes:
+  bitcoin-core:
+    driver: local
