@@ -1,6 +1,6 @@
 services:
   bitcoin-core:
-    build: 
+    build:
       context: ./regtest_node
       dockerfile: Dockerfile
     ports:
@@ -9,6 +9,18 @@ services:
     volumes:
       - bitcoin-core:/root/.bitcoin
 
+  # Use https://nostrdebug.com/ connected to ws://loclalhost:8080 to test
+  nostr-relay:
+    image: scsibug/nostr-rs-relay:0.8.8
+    ports:
+      - 8080:8080
+    volumes:
+      - nostr-relay:/usr/src/app/db
+
+
 volumes:
   bitcoin-core:
+    driver: local
+
+  nostr-relay:
     driver: local
