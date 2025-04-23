@@ -100,6 +100,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "dns_nostr_server"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "hickory-server",
+ "tokio",
+]
+
+[[package]]
 name = "enum-as-inner"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -421,15 +430,6 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys",
-]
-
-[[package]]
-name = "nostr_dns"
-version = "0.0.0"
-dependencies = [
- "async-trait",
- "hickory-server",
- "tokio",
 ]
 
 [[package]]

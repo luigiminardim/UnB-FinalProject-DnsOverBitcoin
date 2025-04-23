@@ -1,17 +1,5 @@
-[package]
-name = "nostr_dns"
-version = "0.0.0"
-edition = "2021"
+[workspace]
 
-[lib]
-name = "lib"
-path = "src/lib.rs"
-
-[[bin]]
-name = "nostr_dns_server"
-path = "src/main.rs"
-
-[dependencies]
-async-trait = "0.1.83"
-hickory-server = "0.24.2"
-tokio = { version = "1.39.3", features = ["macros", "rt-multi-thread", "net", "fs"] }
+members = [
+    "./dns_nostr_server",
+]
