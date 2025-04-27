@@ -125,7 +125,6 @@ OP_FALSE
 OP_IF
   OP_PUSH "name"            # Namespace identifier (ASCII string)
   OP_PUSH $label            # Represents the subdomain (e.g., "blog") - follows RFC-1034 and lowercase
-  OP_PUSH $operation        # Type of operation: 0 for creation, 1 for update (single byte integer)
   OP_0                      # Section separator (OP_0 opcode)
   OP_PUSH $section_protocol # Identifier for the protocol using this token's data (ASCII string, e.g., "dns-nostr")
   OP_PUSH $argument_0       # Protocol-specific argument (format depends on <section_protocol>)
@@ -138,7 +137,6 @@ The fields explanation is as follows:
 
 - name: A fixed ASCII string identifying this output as containing Name-Token metadata.
 - `$label`: The unique UTF-8 string representing the name of the token (e.g., "mydomain").
-- `$operation`: A single byte (unsigned 8-bit integer) indicating the operation: 0 for token creation and 1 for updating an existing token.
 - `OP_0`: An opcode used as a separator between different sections of the inscription. This allows for extensibility and the potential inclusion of data for different protocols associated with the same Name-Token in the future.
 - `$section_protocol`: An ASCII string identifying the protocol for which the subsequent arguments are intended (e.g., "dns-nostr").
 - `$argument_0`: The first argument specific to the protocol defined in `$section_protocol`. The format and number of arguments depends on the protocol.
@@ -152,7 +150,6 @@ OP_FALSE
 OP_IF
   OP_PUSH "name"
   OP_PUSH $label            # Should follow RFC-1034 DNS rules for labels and use downcase letters
-  OP_PUSH $operation        # Type of operation: 0 for creation, 1 for update
   OP_0
   OP_PUSH "dns-nostr"
   OP_PUSH $nostr_pubkey_hex # Raw hexadecimal representation of the Nostr public key
