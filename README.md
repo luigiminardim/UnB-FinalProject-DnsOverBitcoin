@@ -143,7 +143,11 @@ The fields explanation is as follows:
 
 ### DNS-Nostr Inscription Protocol
 
-For Name-Tokens used with the DNS-Nostr protocol, the `$section_protocol` will be "dns-nostr", and the first argument (`$argument_0`) will be the raw hexadecimal representation of the Nostr public key associated with the token.
+A UTXO inscribed with the _DNS-Nostr_ protocol section within the Name-Token
+inscription is referred to as a DNS-Nostr token. For these tokens, the
+`$section_protocol` field will be set to `"dns-nostr"`, and the first argument
+(`$argument_0`) will be the raw hexadecimal representation of the Nostr public
+key associated with the token.
 
 ```bash
 OP_FALSE
