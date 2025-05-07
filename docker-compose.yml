@@ -9,7 +9,7 @@ services:
     volumes:
       - bitcoin-core:/root/.bitcoin
 
-  # Use https://nostrdebug.com/ connected to ws://loclalhost:8080 to test
+  # Use https://nostrdebug.com/ connected to ws://localhost:8080 to test
   nostr-relay:
     image: scsibug/nostr-rs-relay:0.8.8
     ports:
