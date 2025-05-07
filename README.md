@@ -10,17 +10,17 @@ a unique named token. The ownership and history of these named tokens are
 immutably recorded on the blockchain.
 
 Currently, this project focuses on a specific application of the Name-Tokens
-protocol: **DNS over Nostr**. In this system, operators of Nostr-DNS servers can
+protocol: **DNS over Nostr**. In this system, operators of DNS-Nostr servers can
 enable the resolution of subdomains under their existing domains (e.g.,
 `*.nostr.dns.app`, `*.name-token.com.br`) using the decentralized Nostr network.
 
 In this application, a _label_ for a desired subdomain (e.g., `blog`) is
-registered as a unique Bitcoin token using the _Nostr-DNS Wallet_. The
+registered as a unique Bitcoin token using the _DNS-Nostr Wallet_. The
 inscription within this token's UTXO links this label to a Nostr public key. The
 wallet manages these labels as Name-Tokens and publishes associated DNS records
 to Nostr using the linked public key.
 
-Operators of _Nostr-DNS Servers_ configure their servers to serve DNS records
+Operators of _DNS-Nostr Servers_ configure their servers to serve DNS records
 for subdomains under their control (e.g., `*.nostr.dns.app`, `*.dns-nostr.com`).
 When a DNS query for such a subdomain (e.g., `blog.nostr.dns.app`) arrives,
 their server queries the Bitcoin blockchain to find the Name-Token associated
@@ -28,24 +28,24 @@ with the label (e.g., `blog`). It then retrieves the linked Nostr public key
 from the inscription and fetches the corresponding DNS records from the Nostr
 network to respond to the DNS query.
 
-The system consists of two main components: the Nostr-DNS Wallet, designed to
-create and manage Name-Tokens representing subdomain labels, and the Nostr-DNS
+The system consists of two main components: the DNS-Nostr Wallet, designed to
+create and manage Name-Tokens representing subdomain labels, and the DNS-Nostr
 Server, operated by domain owners to resolve these subdomains under its domains
 based on these Name-Tokens.
 
 ## Features
 
-### Nostr-DNS Wallet
+### DNS-Nostr Wallet
 
 - **Standard Bitcoin Wallet Functions**: Send and receive satoshis.
-- **Nostr-DNS Name-Token** creation and management:
-  - Create _Nostr-DNS Name-Tokens_ on the Bitcoin blockchain (representing labels for subdomains).
-  - Update the Nostr public key associated with a _Nostr-DNS Name-Token_, effectively changing the owner of the DNS records in the Nostr Network, which requires creating a new inscription.
-  - Transfer ownership of _Nostr-DNS Name-Tokens_ to other wallets.
-  - Revoke _Nostr-DNS Name-Tokens_.
-- **Nostr Integration**: Publish DNS records as text notes to a Nostr relay using the Nostr public key. This allows the Nostr-DNS server to fetch records from the Nostr network.
+- **DNS-Nostr Name-Token** creation and management:
+  - Create _DNS-Nostr Name-Tokens_ on the Bitcoin blockchain (representing labels for subdomains).
+  - Update the Nostr public key associated with a _DNS-Nostr Name-Token_, effectively changing the owner of the DNS records in the Nostr Network, which requires creating a new inscription.
+  - Transfer ownership of _DNS-Nostr Name-Tokens_ to other wallets.
+  - Revoke _DNS-Nostr Name-Tokens_.
+- **Nostr Integration**: Publish DNS records as text notes to a Nostr relay using the Nostr public key. This allows the DNS-Nostr server to fetch records from the Nostr network.
 
-### Nostr-DNS Server
+### DNS-Nostr Server
 
 - **Name-Token Resolution:** Reads Bitcoin UTXOs by scanning the Bitcoin blockchain to find the mapping between named tokens (representing subdomain labels under the server owner's domain) and their associated Nostr public keys in the token's inscription.
 - **Subdomain Resolution:** Specifically resolves subdomains formed by combining a registered label with the server owner's configured domain (e.g., `label.nostr.dns.app`). It fetches DNS records from a specific Nostr relay using the associated Nostr public key obtained from the Name-Token's inscription on the Bitcoin blockchain.
@@ -75,14 +75,14 @@ graph LR
     DnsClient["DNS Client"] -- "DNS queries" --> DnsServer
 ```
 
-The Nostr-DNS system leverages both the Bitcoin and Nostr networks through two
-primary components: the Nostr-DNS Wallet and the Nostr-DNS Server.
+The DNS-Nostr system leverages both the Bitcoin and Nostr networks through two
+primary components: the DNS-Nostr Wallet and the DNS-Nostr Server.
 
-The Nostr-DNS Wallet creates Name-Token inscriptions on the Bitcoin blockchain
+The DNS-Nostr Wallet creates Name-Token inscriptions on the Bitcoin blockchain
 to register subdomain labels and associate them with a Nostr public key. It also
 publishes DNS records as text notes to the Nostr network using this public key.
 
-The Nostr-DNS Server, operated by domain owners, reads these Name-Token
+The DNS-Nostr Server, operated by domain owners, reads these Name-Token
 inscriptions from the Bitcoin blockchain to discover the mapping between
 subdomain labels and Nostr public keys. When a DNS Client sends DNS queries for
 a subdomain under its control, the server fetches the corresponding DNS records
@@ -168,7 +168,7 @@ also due to the case-insensitive nature of DNS, promoting consistency within the
 Name-Token system.
 
 <!--
-Getting Started: Instructions on how someone can start using the Nostr-DNS Wallet (if it's publicly available) or how a domain owner can set up a Nostr-DNS Server.
+Getting Started: Instructions on how someone can start using the DNS-Nostr Wallet (if it's publicly available) or how a domain owner can set up a DNS-Nostr Server.
 
 Installation: If there are any software components, detail the installation process.
 
