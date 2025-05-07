@@ -21,12 +21,12 @@ wallet manages these labels as Name-Tokens and publishes associated DNS records
 to Nostr using the linked public key.
 
 Operators of _Nostr-DNS Servers_ configure their servers to serve DNS records
-for subdomains under their control (e.g., `*.nostr.dns.app`). When a DNS query
-for such a subdomain (e.g., `blog.nostr.dns.app`) arrives, their server queries
-the Bitcoin blockchain to find the Name-Token associated with the label (e.g.,
-`blog`). It then retrieves the linked Nostr public key from the inscription and
-fetches the corresponding DNS records from the Nostr network to respond to the
-DNS query.
+for subdomains under their control (e.g., `*.nostr.dns.app`, `*.dns-nostr.com`).
+When a DNS query for such a subdomain (e.g., `blog.nostr.dns.app`) arrives,
+their server queries the Bitcoin blockchain to find the Name-Token associated
+with the label (e.g., `blog`). It then retrieves the linked Nostr public key
+from the inscription and fetches the corresponding DNS records from the Nostr
+network to respond to the DNS query.
 
 The system consists of two main components: the Nostr-DNS Wallet, designed to
 create and manage Name-Tokens representing subdomain labels, and the Nostr-DNS
