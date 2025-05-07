@@ -9,7 +9,7 @@ while [ -z "$IS_RUNNING" ]; do
 done
 
 # create minner wallet if it doesn't exist
-WALLET_EXISTS=$(bitcoin-cli listwallets | grep minner)
+WALLET_EXISTS=$(bitcoin-cli loadwallet "minner" | grep minner)
 if [ -z "$WALLET_EXISTS" ]; then
     bitcoin-cli createwallet "minner"
 fi
