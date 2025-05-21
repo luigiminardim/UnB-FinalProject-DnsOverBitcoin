@@ -21,6 +21,9 @@ impl DnsNostrTokenRepository {
         // ## Public key
         // bech32 npub1llme4s02jegnqnk5kudq2smj44dzv2lxztw6qky2awzxzaaa983ql8jaue
         // hex    fff79ac1ea9651304ed4b71a054372ad5a262be612dda0588aeb846177bd29e2
+        //      03fff79ac1ea9651304ed4b71a054372ad5a262be612dda0588aeb846177bd29e2 -> 01479287a57ec815efd0e6f2e0497ee4c9536e05 -> bcrt1qq9re9pa90myptm7sumewqjt7uny4xms92n792q
+        // tx: 3b632b845288cc38a23993e75cd778f246f6b75ab8d12493f6c734647c0e0109
+        // block: 38676abda48b88c4a465bd7188571046465890d999e10cb5d739956414bbcad2 
         let nostr_pubkey = nostr_sdk::PublicKey::from_byte_array([
             0xff, 0xf7, 0x9a, 0xc1, 0xea, 0x96, 0x51, 0x30, 0x4e, 0xd4, 0xb7, 0x1a, 0x05, 0x43,
             0x72, 0xad, 0x5a, 0x26, 0x2b, 0xe6, 0x12, 0xdd, 0xa0, 0x58, 0x8a, 0xeb, 0x84, 0x61,
