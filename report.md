@@ -89,9 +89,12 @@ Internet community [^ref:rfc_1591].
 
 ### 1.2 How does DNS work?
 
-As defined by RFC 1034 [^ref:rfc_1034], the DNS operates through a coordinated
-effort of three major components: the domain name space and resource records,
-name servers, and resolvers.
+As defined by RFC 1034 [^ref:rfc_1034], the DNS system comprises three major
+elements: the Domain Name Space and Resource Records, Name Servers, and
+Resolvers. These elements collectively establish and manage a consistent naming
+space for referring to various resources, allowing for the retrieval of
+associated information without names being rigidly tied to specific network
+identifiers or addresses.
 
 The domain name space forms a crucial part of this structure, serving as a
 hierarchical, tree-structured system where each node or leaf conceptually names
@@ -139,14 +142,12 @@ copies while concurrently processing queries from resolvers.
 When you type a domain name into your browser, a series of steps occur
 leveraging these components:
 
-1. Request Initiation: Your computer (the DNS Client) sends a query to a DNS
+1. Request Initiation: Your computer, as DNS client sends a query to a DNS
    resolver, often provided by your internet service provider (ISP).
-   [^rfc:2132]
+   [^ref:rfc_2132]
 2. If the local DNS resolver does not have the requested information in its
    cache, it initiates a recursive query process on behalf of the DNS client. It
-   begins this process by contacting one of the root name servers. These root
-   servers are preconfigured with the IANA's "root hints file". This file
-   contains the names and IP addresses of the authoritative name servers for the
+   begins this process by contacting one of the root name servers. The recursive resolver are preconfigured with the IANA's "root hints file", which contains the names and IP addresses of the authoritative name servers for the
    root zone.
 3. TLD Name Servers: The resolver then queries the appropriate TLD name server,
    which directs it to the authoritative name servers for the specific domain
@@ -154,24 +155,24 @@ leveraging these components:
 4. Authoritative Name Server: Finally, the resolver queries the authoritative
    name server for example.com, which holds the actual DNS records (like the IP
    address) for that domain.
-5. Response and Caching: The IP address is returned to your resolver, then to
+5. Response and Caching: The answer returned to your resolver, then to
    your computer, and is often cached along the way for faster future lookups.
 
 ```mermaid
 graph TD
-    DnsClient[DNS Client] -->|Query A example.com| Recursive[Recursive Resolver];
-    Recursive -->|Query root name servers| Root[Root Name Servers];
+    DnsClient[DNS Client] -->|1- Query<br>''A example.com''| Recursive[Recursive Resolver];
+    Recursive -->|2- Query<br>''A example.com''| Root[Root Name Servers<br>''.''];
     Root -->|Referral to .com TLD| Recursive;
-    Recursive -->|Query .com TLD name servers| D(TLD Name Servers <br> e.g., .com);
-    D -->|Referral to example.com authoritative| Recursive;
-    Recursive -->|Query example.com authoritative| E(Authoritative Name Server <br> example.com);
-    E -->|IP Address for example.com| Recursive;
-    Recursive -->|IP Address to Client| DnsClient;
+    Recursive -->|3- Query<br>''A example.com''| TLD(TLD Name Servers <br> ''.com'');
+    TLD -->|Referral to example.com authoritative| Recursive;
+    Recursive -->|4- Query| Authoritative(Authoritative Name Server <br>''example.com'');
+    Authoritative -->|Answer resolver<br>''A _ip_address_''| Recursive;
+    Recursive -->|5- Answer client<br>''A _ip_address_''| DnsClient;
 
     subgraph Internet
         Root
-        D
-        E
+        TLD
+        Authoritative
     end
 ```
 
@@ -184,6 +185,51 @@ master files are text files that contain RRs in a standardized text format,
 serving as the primary means to define a zone's contents for a name server. Any
 changes or updates to these records must be made through this provider, which
 then propagates the updates to the global DNS system.
+
+To illustrate the structure of a typical DNS master file, consider the following
+example for <example.com>:
+
+```dns
+; This is a sample DNS master file (zone file) for example.com
+; It defines the resource records for the domain.
+
+$ORIGIN example.com. ; The base domain for relative names in this file
+
+; Start of Authority (SOA) Record: Defines the primary name server and administrative details for the zone.
+@               IN      SOA     ns1.example.com. admin.example.com. (
+                        2024052301 ; Serial number (typically YYYYMMDDNN)
+                        7200       ; Refresh (seconds)
+                        3600       ; Retry (seconds)
+                        1209600    ; Expire (seconds)
+                        3600       ; Minimum TTL (seconds)
+                        )
+
+; Name Server (NS) Records: Specifies the authoritative name servers for the domain.
+@               IN      NS      ns1.example.com.
+@               IN      NS      ns2.example.com.
+
+; Address (A) Records: Maps a domain name to an IPv4 address.
+@               IN      A       192.0.2.10   ; example.com resolves to this IP
+www             IN      A       192.0.2.10   ; www.example.com resolves to the same IP
+blog            IN      A       192.0.2.20   ; blog.example.com resolves to a different IP
+
+; IPv6 Address (AAAA) Records: Maps a domain name to an IPv6 address.
+@               IN      AAAA    2001:0db8::10 ; example.com resolves to this IPv6
+www             IN      AAAA    2001:0db8::10 ; www.example.com resolves to the same IPv6
+
+; Mail Exchanger (MX) Records: Specifies mail servers for the domain.
+; The number (e.g., 10) is the preference value; lower numbers are preferred.
+@               IN      MX      10 mail.example.com.
+
+; Canonical Name (CNAME) Record: Creates an alias from one domain name to another.
+ftp             IN      CNAME   example.com. ; ftp.example.com is an alias for example.com
+
+; Text (TXT) Records: Stores arbitrary text data, often used for verification or policy.
+; SPF record for email sender policy.
+@               IN      TXT     "v=spf1 include:_spf.example.com ~all"
+_dmarc          IN      TXT     "v=DMARC1; p=none; rua=mailto:dmarc@example.com" ; DMARC policy
+_acme-challenge.sub IN  TXT     "some-challenge-string" ; Used for ACME (Let's Encrypt) challenges
+```
 
 <!-- Centralized DNS -->
 
