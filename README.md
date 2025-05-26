@@ -1,4 +1,4 @@
-# Name-Tokens and DNS over Nostr
+# DNS-Nostr Tokens
 
 ## Overview
 
@@ -10,8 +10,8 @@ a unique named token. The ownership and history of these named tokens are
 immutably recorded on the blockchain.
 
 Currently, this project focuses on a specific application of the Name-Tokens
-protocol: **DNS over Nostr**. In this system, operators of DNS-Nostr servers can
-enable the resolution of subdomains under their existing domains (e.g.,
+protocol: **# DNS-Nostr Tokens**. In this system, operators of DNS-Nostr servers
+can enable the resolution of subdomains under their existing domains (e.g.,
 `*.nostr.dns.app`, `*.name-token.com.br`) using the decentralized Nostr network.
 
 In this application, a _label_ for a desired subdomain (e.g., `blog`) is
