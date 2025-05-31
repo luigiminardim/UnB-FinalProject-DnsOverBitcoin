@@ -1,3 +1,7 @@
+use crate::{
+    dns_nostr_token_repository::DnsNostrTokenRepository,
+    nostr_events_repository::NostrEventsRepository,
+};
 use hickory_server::{
     authority::{Authority, LookupError, LookupOptions, MessageRequest, UpdateResult, ZoneType},
     proto::{
@@ -8,80 +12,11 @@ use hickory_server::{
     server::RequestInfo,
     store::in_memory::InMemoryAuthority,
 };
-use std::path::PathBuf;
 
 pub struct NostrAuthority {
-    nostr_root: LowerName,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-struct NameInfo {
-    token: LowerName,
-
-    /// {token}.{root}
     zone: LowerName,
-}
-
-impl NostrAuthority {
-    pub fn new() -> Self {
-        Self {
-            nostr_root: "nostr.dns.name.".parse().unwrap(),
-        }
-    }
-
-    async fn create_zone_authority(&self, name: &LowerName) -> Option<InMemoryAuthority> {
-        let NameInfo { token, zone } = self.extract_name_info(name)?;
-        let filename = dbg!(self.token_to_filename(&token));
-        let buf = String::from_utf8(tokio::fs::read(&filename).await.ok()?).ok()?;
-        let (_, records) = Parser::new(buf, None, Some(name.base_name().into()))
-            .parse()
-            .inspect_err(|e| {
-                format!("failed to parse {}: {:?}", filename.to_string_lossy(), e);
-            })
-            .ok()?;
-        let authority =
-            InMemoryAuthority::new(zone.clone().into(), records, ZoneType::Primary, false)
-                .inspect_err(|e| {
-                    format!(
-                        "failed to create authority for {}: {:?}",
-                        zone.to_string(),
-                        e
-                    );
-                })
-                .ok()?;
-        Some(authority)
-    }
-
-    fn extract_name_info(&self, name: &LowerName) -> Option<NameInfo> {
-        // name should be <{subdomain}.>{token}.{root}
-        if !self.origin().zone_of(name) || name.num_labels() < self.origin().num_labels() + 1 {
-            return None;
-        }
-        let zone = Name::from_labels(
-            Name::from(name)
-                .iter()
-                .skip((name.num_labels() - self.origin().num_labels()).into())
-                .collect::<Vec<_>>(),
-        )
-        .ok()?;
-        let token = Name::from_labels(
-            Name::from(name)
-                .iter()
-                .skip((name.num_labels() - self.origin().num_labels() - 1).into())
-                .next(),
-        )
-        .ok()?;
-        Some(NameInfo {
-            token: token.into(),
-            zone: zone.into(),
-        })
-    }
-
-    fn token_to_filename(&self, token: &LowerName) -> PathBuf {
-        let mut copy: Name = token.clone().into();
-        copy.set_fqdn(false);
-        PathBuf::from(format!("./data/zone-files/{copy}.zone"))
-    }
+    dns_nostr_token_repository: DnsNostrTokenRepository,
+    nostr_events_repository: NostrEventsRepository,
 }
 
 #[async_trait::async_trait]
@@ -102,7 +37,7 @@ impl Authority for NostrAuthority {
     }
 
     fn origin(&self) -> &LowerName {
-        &self.nostr_root
+        &self.zone
     }
 
     async fn lookup(
@@ -112,7 +47,7 @@ impl Authority for NostrAuthority {
         lookup_options: LookupOptions,
     ) -> Result<Self::Lookup, LookupError> {
         let authority = self
-            .create_zone_authority(name)
+            .create_in_memory_zone_authority(name)
             .await
             .ok_or_else(|| LookupError::from(ResponseCode::NXDomain))?;
         authority.lookup(name, rtype, lookup_options).await
@@ -135,7 +70,7 @@ impl Authority for NostrAuthority {
         lookup_options: LookupOptions,
     ) -> Result<Self::Lookup, LookupError> {
         let authority = self
-            .create_zone_authority(request.query.name())
+            .create_in_memory_zone_authority(request.query.name())
             .await
             .ok_or_else(|| LookupError::from(ResponseCode::NXDomain))?;
         authority.search(request, lookup_options).await
@@ -179,51 +114,191 @@ impl Authority for NostrAuthority {
     }
 }
 
+impl NostrAuthority {
+    pub fn new(
+        zone: LowerName,
+        dns_nostr_token_repository: DnsNostrTokenRepository,
+        nostr_client: NostrEventsRepository,
+    ) -> Self {
+        Self {
+            zone,
+            dns_nostr_token_repository,
+            nostr_events_repository: nostr_client,
+        }
+    }
+
+    async fn create_in_memory_zone_authority(&self, name: &LowerName) -> Option<InMemoryAuthority> {
+        let zone_file = self.get_zone_file(name).await?;
+        let zone_name = self.extract_zone_name(name)?;
+        let (_, records) = Parser::new(&zone_file, None, Some(zone_name.clone()))
+            .parse()
+            .inspect_err(|e| {
+                eprintln!("failed to parse zone file ({:?}):\n: {}", e, &zone_file);
+            })
+            .ok()?;
+        let authority =
+            InMemoryAuthority::new(zone_name.clone(), records, ZoneType::Primary, false)
+                .inspect_err(|e| {
+                    format!(
+                        "failed to create authority for {}: {:?}",
+                        zone_name.to_string(),
+                        e
+                    );
+                })
+                .ok()?;
+        Some(authority)
+    }
+
+    async fn get_zone_file(&self, name: &LowerName) -> Option<String> {
+        let token_label = self.extract_token_label(name)?;
+        let dns_nostr_token = self
+            .dns_nostr_token_repository
+            .get_token(&token_label)
+            .await?;
+        let last_text_note = self
+            .nostr_events_repository
+            .get_last_text_note_from_pubkey(dns_nostr_token.nostr_pubkey)
+            .await?;
+        Some(last_text_note.content)
+    }
+
+    /// Check if the domain name has the shape "[<subdomain>.]<label>.<oringin>."
+    fn is_valid_dns_nostr_name(&self, name: &LowerName) -> bool {
+        name.num_labels() > self.origin().num_labels() && self.origin().zone_of(name)
+    }
+
+    /// Extract the label from the queried Name-Token.
+    ///
+    /// ## Example
+    ///
+    /// Suppose the origin is nostr.dns.name and the query is "token.nostr.dns.name",
+    /// then the label is "token".
+    fn extract_token_label(&self, name: &LowerName) -> Option<String> {
+        if !self.is_valid_dns_nostr_name(name) {
+            return None;
+        }
+        let query_name = Name::from(name);
+        let raw_label = query_name
+            .iter()
+            .skip((query_name.num_labels() - self.origin().num_labels() - 1).into())
+            .next()?;
+        String::from_utf8(raw_label.to_vec()).ok()
+    }
+
+    /// Extract the zone name from the queried Name-Token.
+    ///
+    /// ## Example
+    ///
+    /// Suppose the origin is nostr.dns.name and the query is "token.nostr.dns.name",
+    /// then the zone name is "nostr.dns.name".
+    fn extract_zone_name(&self, name: &LowerName) -> Option<Name> {
+        if !self.is_valid_dns_nostr_name(name) {
+            return None;
+        }
+        let zone = Name::from_labels(
+            Name::from(name)
+                .iter()
+                .skip((name.num_labels() - self.origin().num_labels() - 1).into())
+                .collect::<Vec<_>>(),
+        )
+        .ok()?;
+        Some(zone)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_extract_token() {
-        let authority = NostrAuthority::new();
-
-        let name = "token.nostr.dns.name".parse().unwrap();
-        let token = authority.extract_name_info(&name);
-        assert_eq!(
-            token,
-            Some(NameInfo {
-                token: "token".parse().unwrap(),
-                zone: "nostr.dns.name".parse().unwrap(),
-            })
+    fn test_is_valid_dns_nostr_name() {
+        let authority = NostrAuthority::new(
+            "nostr.dns.name.".parse().unwrap(),
+            DnsNostrTokenRepository::new(),
+            NostrEventsRepository::new("ws://localhost:8080".to_string()),
         );
+
+        let name = "token.nostr.dns.name.".parse().unwrap();
+        assert!(authority.is_valid_dns_nostr_name(&name));
 
         let name = "subdomain.token.nostr.dns.name.".parse().unwrap();
-        let token = authority.extract_name_info(&name);
-        assert_eq!(
-            token,
-            Some(NameInfo {
-                token: "token".parse().unwrap(),
-                zone: "nostr.dns.name".parse().unwrap(),
-            })
-        );
+        assert!(authority.is_valid_dns_nostr_name(&name));
 
         let name = "nostr.dns.name.".parse().unwrap();
-        let token = authority.extract_name_info(&name);
-        assert_eq!(token, None);
+        assert!(!authority.is_valid_dns_nostr_name(&name));
+
+        let name = "token.notnostr.dns.name.".parse().unwrap();
+        assert!(!authority.is_valid_dns_nostr_name(&name));
     }
 
     #[test]
-    fn test_token_to_filename() {
-        let authority = NostrAuthority::new();
-
-        assert_eq!(
-            authority.token_to_filename(&"token".parse().unwrap()),
-            PathBuf::from("./data/zone-files/token.zone")
+    fn test_is_dns_nostr_name() {
+        let authority = NostrAuthority::new(
+            "nostr.dns.name.".parse().unwrap(),
+            DnsNostrTokenRepository::new(),
+            NostrEventsRepository::new("ws://localhost:8080".to_string()),
         );
 
-        assert_eq!(
-            authority.token_to_filename(&"token.".parse().unwrap()),
-            PathBuf::from("./data/zone-files/token.zone")
+        let name = "token.nostr.dns.name.".parse().unwrap();
+        assert!(authority.is_valid_dns_nostr_name(&name));
+
+        let name = "subdomain.token.nostr.dns.name.".parse().unwrap();
+        assert!(authority.is_valid_dns_nostr_name(&name));
+
+        let name = "nostr.dns.name.".parse().unwrap();
+        assert!(!authority.is_valid_dns_nostr_name(&name));
+
+        let name = "token.notnostr.dns.name.".parse().unwrap();
+        assert!(!authority.is_valid_dns_nostr_name(&name));
+    }
+
+    #[test]
+    fn test_extract_token_label() {
+        let authority = NostrAuthority::new(
+            "nostr.dns.name.".parse().unwrap(),
+            DnsNostrTokenRepository::new(),
+            NostrEventsRepository::new("ws://localhost:8080".to_string()),
         );
+
+        let name = "token.nostr.dns.name.".parse().unwrap();
+        let label = authority.extract_token_label(&name);
+        assert_eq!(label, Some("token".to_string()));
+
+        let name = "subdomain.token.nostr.dns.name.".parse().unwrap();
+        let label = authority.extract_token_label(&name);
+        assert_eq!(label, Some("token".to_string()));
+
+        let name = "nostr.dns.name.".parse().unwrap();
+        let label = authority.extract_token_label(&name);
+        assert_eq!(label, None);
+
+        let name = "token.notnostr.dns.name.".parse().unwrap();
+        let label = authority.extract_token_label(&name);
+        assert_eq!(label, None);
+    }
+
+    #[test]
+    fn test_extract_zone_name() {
+        let authority = NostrAuthority::new(
+            "nostr.dns.name.".parse().unwrap(),
+            DnsNostrTokenRepository::new(),
+            NostrEventsRepository::new("ws://localhost:8080".to_string()),
+        );
+
+        let name = "token.nostr.dns.name.".parse().unwrap();
+        let zone = authority.extract_zone_name(&name);
+        assert_eq!(zone, Some("token.nostr.dns.name.".parse().unwrap()));
+
+        let name = "subdomain.token.nostr.dns.name.".parse().unwrap();
+        let zone = authority.extract_zone_name(&name);
+        assert_eq!(zone, Some("token.nostr.dns.name.".parse().unwrap()));
+
+        let name = "nostr.dns.name.".parse().unwrap();
+        let zone = authority.extract_zone_name(&name);
+        assert_eq!(zone, None);
+
+        let name = "token.notnostr.dns.name.".parse().unwrap();
+        let zone = authority.extract_zone_name(&name);
+        assert_eq!(zone, None);
     }
 }
