@@ -6,7 +6,7 @@ use hickory_server::{
     authority::{Authority, LookupError, LookupOptions, MessageRequest, UpdateResult, ZoneType},
     proto::{
         op::ResponseCode,
-        rr::{LowerName, Name, RecordType},
+        rr::{domain::Label, LowerName, Name, RecordType},
         serialize::txt::Parser,
     },
     server::RequestInfo,
@@ -173,7 +173,7 @@ impl NostrAuthority {
     ///
     /// Suppose the origin is nostr.dns.name and the query is "token.nostr.dns.name",
     /// then the label is "token".
-    fn extract_token_label(&self, name: &LowerName) -> Option<String> {
+    fn extract_token_label(&self, name: &LowerName) -> Option<Label> {
         if !self.is_valid_dns_nostr_name(name) {
             return None;
         }
@@ -182,7 +182,7 @@ impl NostrAuthority {
             .iter()
             .skip((query_name.num_labels() - self.origin().num_labels() - 1).into())
             .next()?;
-        String::from_utf8(raw_label.to_vec()).ok()
+        Label::from_raw_bytes(raw_label).ok()
     }
 
     /// Extract the zone name from the queried Name-Token.
@@ -262,11 +262,11 @@ mod tests {
 
         let name = "token.nostr.dns.name.".parse().unwrap();
         let label = authority.extract_token_label(&name);
-        assert_eq!(label, Some("token".to_string()));
+        assert_eq!(label, Some(Label::from_utf8("token").unwrap()));
 
         let name = "subdomain.token.nostr.dns.name.".parse().unwrap();
         let label = authority.extract_token_label(&name);
-        assert_eq!(label, Some("token".to_string()));
+        assert_eq!(label, Some(Label::from_utf8("token").unwrap()));
 
         let name = "nostr.dns.name.".parse().unwrap();
         let label = authority.extract_token_label(&name);

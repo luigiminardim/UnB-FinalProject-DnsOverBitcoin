@@ -1,8 +1,5 @@
-#[derive(Debug, Clone)]
-pub struct DnsNostrToken {
-    pub label: String,
-    pub nostr_pubkey: nostr_sdk::PublicKey,
-}
+use crate::dns_nostr_token::DnsNostrToken;
+use hickory_server::proto::rr::domain::Label;
 
 pub struct DnsNostrTokenRepository {
     _priv: (),
@@ -14,7 +11,7 @@ impl DnsNostrTokenRepository {
     }
 
     /// TODO: implement a real token repository
-    pub async fn get_token(&self, label: &str) -> Option<DnsNostrToken> {
+    pub async fn get_token(&self, label: &Label) -> Option<DnsNostrToken> {
         // ## Private key
         // bech32 nsec1dlca2jrtdrv5xq7s6aku25s68sm0yqsr55a65xk8q762maw2mgwquqvqa6
         // hex    6ff1d5486b68d94303d0d76dc5521a3c36f20203a53baa1ac707b4adf5cada1c
@@ -27,7 +24,7 @@ impl DnsNostrTokenRepository {
             0x77, 0xbd, 0x29, 0xe2,
         ]);
         let dns_nostr_token = DnsNostrToken {
-            label: label.to_string(),
+            label: label.clone(),
             nostr_pubkey,
         };
         Some(dns_nostr_token)
