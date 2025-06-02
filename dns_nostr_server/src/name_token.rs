@@ -6,7 +6,7 @@ use bitcoin::{
     TxOut,
 };
 
-type Bytes = Vec<u8>;
+pub type Bytes = Vec<u8>;
 
 #[derive(Debug, Clone)]
 pub struct InscriptionSection {
