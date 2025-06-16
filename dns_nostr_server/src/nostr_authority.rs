@@ -1,6 +1,5 @@
 use crate::{
-    dns_nostr_token_repository::DnsNostrTokenRepository,
-    nostr_events_repository::NostrEventsRepository,
+    dns_nostr_token_repository::GetDnsNostrToken, nostr_events_repository::NostrEventsRepository,
 };
 use hickory_server::{
     authority::{Authority, LookupError, LookupOptions, MessageRequest, UpdateResult, ZoneType},
@@ -13,14 +12,14 @@ use hickory_server::{
     store::in_memory::InMemoryAuthority,
 };
 
-pub struct NostrAuthority {
+pub struct NostrAuthority<GetTokenT: GetDnsNostrToken + Send + Sync> {
     zone: LowerName,
-    dns_nostr_token_repository: DnsNostrTokenRepository,
+    dns_nostr_token_repository: GetTokenT,
     nostr_events_repository: NostrEventsRepository,
 }
 
 #[async_trait::async_trait]
-impl Authority for NostrAuthority {
+impl<GetTokenT: GetDnsNostrToken + Send + Sync> Authority for NostrAuthority<GetTokenT> {
     /// Result of a lookup
     type Lookup = <InMemoryAuthority as Authority>::Lookup;
 
@@ -114,10 +113,10 @@ impl Authority for NostrAuthority {
     }
 }
 
-impl NostrAuthority {
+impl<GetTokenT: GetDnsNostrToken + Send + Sync> NostrAuthority<GetTokenT> {
     pub fn new(
         zone: LowerName,
-        dns_nostr_token_repository: DnsNostrTokenRepository,
+        dns_nostr_token_repository: GetTokenT,
         nostr_client: NostrEventsRepository,
     ) -> Self {
         Self {
@@ -209,12 +208,21 @@ impl NostrAuthority {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dns_nostr_token::DnsNostrToken;
+
+    struct GetDnsNostrTokenStub {}
+
+    impl GetDnsNostrToken for GetDnsNostrTokenStub {
+        async fn get_token(&self, _label: &Label) -> Option<DnsNostrToken> {
+            None
+        }
+    }
 
     #[test]
     fn test_is_valid_dns_nostr_name() {
         let authority = NostrAuthority::new(
             "nostr.dns.name.".parse().unwrap(),
-            DnsNostrTokenRepository::new(),
+            GetDnsNostrTokenStub {},
             NostrEventsRepository::new("ws://localhost:8080".to_string()),
         );
 
@@ -235,7 +243,7 @@ mod tests {
     fn test_is_dns_nostr_name() {
         let authority = NostrAuthority::new(
             "nostr.dns.name.".parse().unwrap(),
-            DnsNostrTokenRepository::new(),
+            GetDnsNostrTokenStub {},
             NostrEventsRepository::new("ws://localhost:8080".to_string()),
         );
 
@@ -256,7 +264,7 @@ mod tests {
     fn test_extract_token_label() {
         let authority = NostrAuthority::new(
             "nostr.dns.name.".parse().unwrap(),
-            DnsNostrTokenRepository::new(),
+            GetDnsNostrTokenStub {},
             NostrEventsRepository::new("ws://localhost:8080".to_string()),
         );
 
@@ -281,7 +289,7 @@ mod tests {
     fn test_extract_zone_name() {
         let authority = NostrAuthority::new(
             "nostr.dns.name.".parse().unwrap(),
-            DnsNostrTokenRepository::new(),
+            GetDnsNostrTokenStub {},
             NostrEventsRepository::new("ws://localhost:8080".to_string()),
         );
 

@@ -1,14 +1,13 @@
-use std::cmp::Ordering;
-
 use bitcoin::{
     opcodes::all::{OP_ENDIF, OP_IF, OP_NOP},
     script::{Instruction, Instructions},
-    TxOut,
+    OutPoint, TxOut,
 };
+use std::cmp::Ordering;
 
 pub type Bytes = Vec<u8>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InscriptionSection {
     pub protocol: Bytes,
     pub arguments: Vec<Bytes>,
@@ -17,13 +16,13 @@ pub struct InscriptionSection {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct InscriptionMetadata {
     /// The block height containing the transaction.
-    pub blockheight: usize,
+    pub blockheight: u64,
 
     /// The index of the transaction in the block.
     pub blockindex: usize,
 
     /// output index of the transaction.
-    pub vout: usize,
+    pub vout: u32,
 
     /// The transaction ID.
     pub txid: bitcoin::Txid,
@@ -63,15 +62,15 @@ mod test_inscription_metadata {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Inscription {
     pub label: Bytes,
     pub sections: Vec<InscriptionSection>,
 }
 
 impl Inscription {
-    pub fn from_txout(txout: TxOut) -> Option<Inscription> {
-        let script_buffer = txout.script_pubkey;
+    pub fn from_txout(txout: &TxOut) -> Option<Inscription> {
+        let script_buffer = &txout.script_pubkey;
         let (label, sections) = parse_inscription(&mut script_buffer.instructions())?;
         Some(Inscription { label, sections })
     }
@@ -188,7 +187,7 @@ mod test_inscription {
             value: Amount::from_sat(0), // Placeholder value,
             script_pubkey,
         };
-        let inscription = Inscription::from_txout(txout).unwrap();
+        let inscription = Inscription::from_txout(&txout).unwrap();
         assert_eq!(inscription.label, b"label");
         assert_eq!(inscription.sections.len(), 2);
         assert_eq!(inscription.sections[0].protocol, b"protocol-0");
@@ -204,7 +203,7 @@ mod test_inscription {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NameToken {
     pub label: Bytes,
     pub first_inscription_metadata: InscriptionMetadata,
@@ -213,7 +212,7 @@ pub struct NameToken {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum UpadateNameTokenError {
+pub enum UpdateNameTokenError {
     /// The new inscription has a different label than the last inscription.
     LabelMismatch,
 
@@ -252,6 +251,13 @@ impl NameToken {
         self.inscription.is_none()
     }
 
+    pub fn last_outpoint(&self) -> OutPoint {
+        OutPoint {
+            txid: self.last_inscription_metadata.txid,
+            vout: self.last_inscription_metadata.vout,
+        }
+    }
+
     pub fn protocol_args(&self, protocol: &Bytes) -> Option<Vec<Bytes>> {
         self.inscription.as_ref().and_then(|inscription| {
             inscription.sections.iter().find_map(|section| {
@@ -268,15 +274,15 @@ impl NameToken {
         &self,
         inscription: Inscription,
         metadata: InscriptionMetadata,
-    ) -> Result<NameToken, UpadateNameTokenError> {
+    ) -> Result<NameToken, UpdateNameTokenError> {
         if inscription.label != self.label {
-            return Err(UpadateNameTokenError::LabelMismatch);
+            return Err(UpdateNameTokenError::LabelMismatch);
         }
         if self.is_revoked() {
-            return Err(UpadateNameTokenError::Revoked);
+            return Err(UpdateNameTokenError::Revoked);
         }
         if self.last_inscription_metadata.cmp(&metadata) != Ordering::Less {
-            return Err(UpadateNameTokenError::StaleInscription);
+            return Err(UpdateNameTokenError::StaleInscription);
         }
         Ok(NameToken {
             label: self.label.clone(),
@@ -294,37 +300,65 @@ impl NameToken {
             inscription: None,
         }
     }
-}
 
-impl PartialEq for NameToken {
-    fn eq(&self, other: &Self) -> bool {
-        self.first_inscription_metadata == other.first_inscription_metadata
-            && self.label == other.label
+    pub fn generate_name_token_updates(
+        input_name_token: Option<&NameToken>,
+        output_inscription: Option<&Inscription>,
+        metadata: InscriptionMetadata,
+    ) -> Vec<NameToken> {
+        match (input_name_token, output_inscription) {
+            (None, None) => vec![],
+            (Some(input_name_token), None) => {
+                let revoked_name_token = input_name_token.clone();
+                vec![revoked_name_token]
+            }
+            (None, Some(output_inscription)) => {
+                let created_name_token = NameToken::create(output_inscription.clone(), metadata);
+                vec![created_name_token]
+            }
+            (Some(input_name_token), Some(output_inscription)) => {
+                match input_name_token.update(output_inscription.clone(), metadata.clone()) {
+                    Ok(updated_name_token) => vec![updated_name_token],
+                    Err(UpdateNameTokenError::LabelMismatch) => {
+                        let revoked_name_token = input_name_token.revoke();
+                        let created_name_token =
+                            NameToken::create(output_inscription.clone(), metadata);
+                        vec![revoked_name_token, created_name_token]
+                    }
+                    Err(UpdateNameTokenError::Revoked) => {
+                        let created_name_token =
+                            NameToken::create(output_inscription.clone(), metadata);
+                        vec![created_name_token]
+                    }
+                    Err(UpdateNameTokenError::StaleInscription) => {
+                        vec![]
+                    }
+                }
+            }
+        }
     }
-}
 
-impl PartialOrd for NameToken {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        match self
-            .first_inscription_metadata
-            .partial_cmp(&other.first_inscription_metadata)
-        {
-            Some(core::cmp::Ordering::Equal) => {}
-            ord => return ord,
-        }
-        match self.label.partial_cmp(&other.label) {
-            Some(core::cmp::Ordering::Equal) => {}
-            ord => return ord,
-        }
-        None
+    pub fn select_valid_name_token<'a>(
+        label: &Bytes,
+        name_tokens: impl IntoIterator<Item = &'a NameToken>,
+    ) -> Option<&'a NameToken> {
+        name_tokens
+            .into_iter()
+            .filter(|nt| &nt.label == label)
+            .filter(|nt| !nt.is_revoked())
+            .min_by(|a, b| {
+                InscriptionMetadata::cmp(
+                    &a.first_inscription_metadata,
+                    &b.first_inscription_metadata,
+                )
+            })
     }
 }
 
 #[cfg(test)]
 mod test_name_token {
-    use bitcoin::{hashes::Hash, Txid};
-
     use super::*;
+    use bitcoin::{hashes::Hash, Txid};
 
     #[test]
     fn test_lifetime() {
@@ -392,5 +426,89 @@ mod test_name_token {
         assert!(revoked_token.is_revoked());
         assert!(revoked_token.protocol_args(&b"section-0".into()).is_none());
         assert!(revoked_token.protocol_args(&b"section-1".into()).is_none());
+    }
+
+    #[test]
+    fn test_select_valid_name_token() {
+        let label = Bytes::from(b"label");
+        let inscription = Inscription {
+            label: label.clone(),
+            sections: vec![InscriptionSection {
+                protocol: b"section-0".into(),
+                arguments: vec![b"arg1".into(), b"arg2".into()],
+            }],
+        };
+        let first_name_token = NameToken::create(
+            inscription.clone(),
+            InscriptionMetadata {
+                blockheight: 1,
+                blockindex: 0,
+                vout: 0,
+                txid: Txid::all_zeros(),
+            },
+        );
+        let second_name_token = NameToken::create(
+            inscription.clone(),
+            InscriptionMetadata {
+                blockheight: 1,
+                blockindex: 1,
+                vout: 0,
+                txid: Txid::all_zeros(),
+            },
+        );
+        let third_name_token = NameToken::create(
+            inscription.clone(),
+            InscriptionMetadata {
+                blockheight: 1,
+                blockindex: 1,
+                vout: 1,
+                txid: Txid::all_zeros(),
+            },
+        );
+        let fourth_name_token = NameToken::create(
+            inscription.clone(),
+            InscriptionMetadata {
+                blockheight: 2,
+                blockindex: 0,
+                vout: 0,
+                txid: Txid::all_zeros(),
+            },
+        );
+        assert_eq!(
+            NameToken::select_valid_name_token(
+                &label,
+                vec![
+                    &fourth_name_token,
+                    &third_name_token,
+                    &second_name_token,
+                    &first_name_token
+                ]
+            ),
+            Some(&first_name_token)
+        );
+
+        let first_name_token = first_name_token
+            .update(
+                inscription,
+                InscriptionMetadata {
+                    blockheight: 2,
+                    blockindex: 0,
+                    vout: 1,
+                    txid: Txid::all_zeros(),
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            NameToken::select_valid_name_token(
+                &label,
+                vec![
+                    &fourth_name_token,
+                    &third_name_token,
+                    &second_name_token,
+                    &first_name_token
+                ]
+            ),
+            Some(&first_name_token)
+        );
     }
 }
