@@ -5,7 +5,7 @@ use crate::{
 };
 use hickory_server::proto::rr::domain::Label;
 
-pub trait GetDnsNostrToken {
+pub trait GetDnsNostrToken: Send + Sync {
     fn get_token(&self, label: &Label) -> impl Future<Output = Option<DnsNostrToken>> + Send;
 }
 

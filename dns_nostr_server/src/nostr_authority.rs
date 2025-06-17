@@ -12,14 +12,14 @@ use hickory_server::{
     store::in_memory::InMemoryAuthority,
 };
 
-pub struct NostrAuthority<GetTokenT: GetDnsNostrToken + Send + Sync> {
+pub struct NostrAuthority<GetTokenT: GetDnsNostrToken> {
     zone: LowerName,
     dns_nostr_token_repository: GetTokenT,
     nostr_events_repository: NostrEventsRepository,
 }
 
 #[async_trait::async_trait]
-impl<GetTokenT: GetDnsNostrToken + Send + Sync> Authority for NostrAuthority<GetTokenT> {
+impl<GetTokenT: GetDnsNostrToken> Authority for NostrAuthority<GetTokenT> {
     /// Result of a lookup
     type Lookup = <InMemoryAuthority as Authority>::Lookup;
 
@@ -113,7 +113,7 @@ impl<GetTokenT: GetDnsNostrToken + Send + Sync> Authority for NostrAuthority<Get
     }
 }
 
-impl<GetTokenT: GetDnsNostrToken + Send + Sync> NostrAuthority<GetTokenT> {
+impl<GetTokenT: GetDnsNostrToken> NostrAuthority<GetTokenT> {
     pub fn new(
         zone: LowerName,
         dns_nostr_token_repository: GetTokenT,
