@@ -16,18 +16,13 @@ struct NameTokenRepositoryState {
 
 #[derive(Clone)]
 pub struct NameTokenRepository {
-    state: Arc<Mutex<NameTokenRepositoryState>>,
+    database: NameTokensDatabase,
 }
 
 impl NameTokenRepository {
     pub async fn create() -> Self {
-        let initial_state = NameTokenRepositoryState {
-            next_block_height: 0,
-            name_tokens: Vec::new(),
-        };
-        let this = Self {
-            state: Arc::new(Mutex::new(initial_state)),
-        };
+        let database = NameTokensDatabase::create();
+        let this = Self { database };
         let this_clone = this.clone();
         tokio::spawn(async move {
             this_clone.watch_blockchain().await;
@@ -55,8 +50,9 @@ impl NameTokenRepository {
 
     // This function would typically sync the repository state with the current state of the blockchain.
     async fn sync_blocks(&self) {
+        println!("Syncing blocks...");
         loop {
-            let state_next_blockheight = self.state.lock().unwrap().next_block_height;
+            let state_next_blockheight = self.database.get_next_block_height().await;
             let blockchain_num_blocks = self
                 .bitcoin_client()
                 .get_blockchain_info()
@@ -70,7 +66,6 @@ impl NameTokenRepository {
     }
 
     async fn sync_next_block(&self, next_blockheight: u64) {
-        println!("Syncing block at height {}", next_blockheight);
         let block_hash = self
             .bitcoin_client()
             .get_block_hash(next_blockheight)
@@ -93,8 +88,15 @@ impl NameTokenRepository {
             )
             .await;
         }
-        self.save_block_updates(blockheight, &pending_block_updates)
+        let updates: Vec<NameToken> = pending_block_updates.values().cloned().collect();
+        self.database
+            .save_block_updates(blockheight, &updates)
             .await;
+        println!(
+            "Synced block at height {} with {} updates",
+            blockheight,
+            updates.len()
+        );
     }
 
     async fn sync_transaction(
@@ -163,41 +165,75 @@ impl NameTokenRepository {
     ) -> Option<NameToken> {
         match pending_block_updates.get(&outpoint) {
             Some(name_token) => Some(name_token.clone()),
-            None => {
-                let state = self.state.lock().unwrap();
-                state
-                    .name_tokens
-                    .iter()
-                    .cloned()
-                    .find(|name_token| name_token.last_outpoint() == outpoint)
-            }
+            None => self.database.get_name_token_by_outpoint(outpoint).await,
         }
     }
 
-    async fn save_block_updates(
+    pub async fn get_name_token(&self, label: &Bytes) -> Option<NameToken> {
+        let name_tokens_with_label = self.database.get_name_tokens_by_label(label).await;
+        let valid_name_token = NameToken::select_valid_name_token(label, &name_tokens_with_label);
+        valid_name_token.cloned()
+    }
+}
+
+#[derive(Clone)]
+struct NameTokensDatabase {
+    state: Arc<Mutex<NameTokenRepositoryState>>,
+}
+
+impl NameTokensDatabase {
+    pub fn create() -> Self {
+        let initial_state = NameTokenRepositoryState {
+            next_block_height: 0,
+            name_tokens: Vec::new(),
+        };
+        Self {
+            state: Arc::new(Mutex::new(initial_state)),
+        }
+    }
+
+    pub async fn get_next_block_height(&self) -> u64 {
+        let state = self.state.lock().unwrap();
+        state.next_block_height
+    }
+
+    pub async fn get_name_token_by_outpoint(&self, outpoint: OutPoint) -> Option<NameToken> {
+        let state = self.state.lock().unwrap();
+        state
+            .name_tokens
+            .iter()
+            .cloned()
+            .find(|name_token| name_token.last_outpoint() == outpoint)
+    }
+
+    pub async fn save_block_updates<'a, IteratorT: IntoIterator<Item = &'a NameToken>>(
         &self,
         blockheight: u64,
-        pending_block_updates: &HashMap<OutPoint, NameToken>,
+        updated_name_tokens: IteratorT,
     ) {
         let mut state = self.state.lock().unwrap();
-        for pending_name_token in pending_block_updates.values() {
+        for name_token in updated_name_tokens {
             let position_to_remove = state.name_tokens.iter().position(|nt| {
-                nt.first_inscription_metadata == pending_name_token.first_inscription_metadata
+                nt.first_inscription_metadata == name_token.first_inscription_metadata
             });
             if let Some(position) = position_to_remove {
                 state.name_tokens.remove(position);
             }
-            if pending_name_token.is_revoked() {
-                continue; // Don't save revoked name tokens
+            if name_token.is_revoked() {
+                continue; // Just remove revoked name tokens
             }
-            state.name_tokens.push(pending_name_token.clone());
+            state.name_tokens.push(name_token.clone());
         }
         state.next_block_height = blockheight + 1;
     }
 
-    pub async fn get_name_token(&self, label: &Bytes) -> Option<NameToken> {
+    pub async fn get_name_tokens_by_label(&self, label: &Bytes) -> Vec<NameToken> {
         let state = self.state.lock().unwrap();
-        let name_token = NameToken::select_valid_name_token(label, &state.name_tokens);
-        name_token.cloned()
+        state
+            .name_tokens
+            .iter()
+            .filter(|&name_token| &name_token.label == label)
+            .cloned()
+            .collect()
     }
 }
