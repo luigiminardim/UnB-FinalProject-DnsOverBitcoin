@@ -7,7 +7,7 @@ use std::cmp::Ordering;
 
 pub type Bytes = Vec<u8>;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct InscriptionSection {
     pub protocol: Bytes,
     pub arguments: Vec<Bytes>,
@@ -62,7 +62,7 @@ mod test_inscription_metadata {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Inscription {
     pub label: Bytes,
     pub sections: Vec<InscriptionSection>,
