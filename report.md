@@ -47,7 +47,7 @@ Imagine the internet as a giant city. Every house (website) has a unique address
 even trickier to type. This is where the Domain Name System (DNS) comes in. It
 acts like the phone book of this city, translating user-friendly domain names
 (like "example.com" or "google.com") into those complex IP addresses that
-computers understand. [^ref:cloudflare-what_is_dns]
+computers understand.[^cloudflare-what_is_dns]
 
 This system is crucial because it allows us to navigate the internet using words
 and phrases we can remember instead of memorizing long strings of numbers.
@@ -56,14 +56,14 @@ time. By acting like an alias for computers providing services, DNS allows
 updates in the link between the domain name and the service's IP address without
 affecting how users access it. So, even if the "house" (server) moves locations
 (changes its IP), users can still find it using the familiar domain name they've
-always known. [^ref:cloudflare-what_is_dns]
+always known.[^cloudflare-what_is_dns]
 
-The fundamental design goals of the DNS, as outlined in RFC 1034
-[^ref:rfc_1034], emphasize consistency and broad utility. The primary aim was to
-create a consistent naming space for referring to various resources, ensuring
-that names wouldn't be tied to specific network identifiers, addresses, or
-routes. This design choice allowed names to remain stable even if the underlying
-network infrastructure changed.
+The fundamental design goals of the DNS, as outlined in RFC 1034[^rfc_1034],
+emphasize consistency and broad utility. The primary aim was to create a
+consistent naming space for referring to various resources, ensuring that names
+wouldn't be tied to specific network identifiers, addresses, or routes. This
+design choice allowed names to remain stable even if the underlying network
+infrastructure changed.
 
 Furthermore, the architects of DNS intended it to be generally helpful and not
 limited to a single application. As RFC 1034 states, using names to retrieve
@@ -77,15 +77,15 @@ information with unique names on the internet.
 Currently, the DNS is a hierarchical system of databases with a top-down,
 hierarchical structure, starting from the broadest level and progressively
 narrowing down to specific hosts. This hierarchy begins with the DNS root zone,
-managed by the Internet Assigned Numbers Authority (IANA)
-[^ref:iana-root_zone_management]. Below the root are the top-level domain names
-(TLDs), encompassing generic categories like ".com", ".org", and ".net", as well
-as two-letter country codes from ISO-3166 (e.g., ".fr", ".br", ".us")
-[^ref:iso_3166]. Each TLD is administered by a designated entity, which then
+managed by the Internet Assigned Numbers Authority
+(IANA)[^iana-root_zone_management]. Below the root are the top-level domain
+names (TLDs), encompassing generic categories like ".com", ".org", and ".net",
+as well as two-letter country codes from ISO-3166 (e.g., ".fr", ".br",
+".us")[^iso_3166]. Each TLD is administered by a designated entity, which then
 further delegates management of subdomains, effectively forming a multi-level
 tree. These administrators play a crucial role in managing portions of the
-naming tree, performing a public service on behalf of the Internet community
-[^ref:rfc_1591].
+naming tree, performing a public service on behalf of the Internet
+community[^rfc_1591].
 
 ```mermaid
 graph TD
@@ -122,7 +122,7 @@ graph TD
 
 ### 1.2 How does DNS work?
 
-As defined by RFC 1034 [^ref:rfc_1034], the DNS system comprises three major
+As defined by RFC 1034 [^rfc_1034], the DNS system comprises three major
 elements: the Domain Name Space and Resource Records, Name Servers, and
 Resolvers. These elements collectively establish and manage a consistent naming
 space for referring to various resources, allowing for the retrieval of
@@ -176,7 +176,7 @@ leveraging these components:
 
 1. Request Initiation: Your computer, as DNS client sends a query to a DNS
    resolver, often provided by your internet service provider (ISP).
-   [^ref:rfc_2132]
+   [^rfc_2132]
 2. If the local DNS resolver does not have the requested information in its
    cache, it initiates a recursive query process on behalf of the DNS client. It
    begins this process by contacting one of the root name servers. The recursive
@@ -194,14 +194,14 @@ leveraging these components:
 
 ```mermaid
 graph TD
-    DnsClient[DNS Client] -->|1- Query<br>''example.com A''| Resolver[Resolver];
-    Resolver -->|2- Query<br>''example.com A''| Root[Root Name Server<br>''.''];
+    DnsClient[DNS Client] -->|1: Query<br>''example.com A''| Resolver[Resolver];
+    Resolver -->|2: Query<br>''example.com A''| Root[Root Name Server<br>''.''];
     Root -->|Referral to TLD<br>''.com NS''| Resolver;
-    Resolver -->|3- Query<br>''example.com A''| TLD(TLD Name Server<br> ''.com'');
+    Resolver -->|3: Query<br>''example.com A''| TLD(TLD Name Server<br> ''.com'');
     TLD -->|Referral to authoritative<br>''example.com NS''| Resolver;
-    Resolver -->|4- Query<br>''example.com A''| Authoritative(Authoritative Name Server <br>''example.com'');
+    Resolver -->|4: Query<br>''example.com A''| Authoritative(Authoritative Name Server <br>''example.com'');
     Authoritative -->|Answer resolver<br>''A _ip_address_''| Resolver;
-    Resolver -->|5- Answer client<br>''A _ip_address_''| DnsClient;
+    Resolver -->|5: Answer client<br>''A _ip_address_''| DnsClient;
 
     subgraph Internet
         Root
@@ -214,7 +214,7 @@ Crucially, for a domain owner to make their website or service accessible, they
 must publish their DNS records with their chosen DNS service provider (often a
 registrar or a specialized DNS host). These providers typically store the zone
 information, including all associated resource records (e.g., A, AAAA, CNAME,
-MX, TXT records), in master files [^ref:rfc1035]. As defined in RFC 1035, these
+MX, TXT records), in master files[^rfc_1035]. As defined in RFC 1035, these
 master files are text files that contain RRs in a standardized text format,
 serving as the primary means to define a zone's contents for a name server. The
 owner must make any changes or updates to these records through this provider,
@@ -259,62 +259,69 @@ _dmarc  IN  TXT     "v=DMARC1;p=reject;sp=reject;adkim=s;aspf=s"; DMARC policy
 
 ### 1.3 Problems with DNS
 
-While the Domain Name System (DNS) is crucial for the internet's functionality,
-its inherently centralized control points, particularly at the root level,
-introduce significant vulnerabilities and challenges. The Internet Assigned
-Numbers Authority (IANA), operating under the Internet Corporation for Assigned
-Names and Numbers (ICANN) manages the DNS root zone. This centralized
-coordination is broadly recognized as indispensable for maintaining global
-internet stability and interoperability, ensuring the consistent application of
-unique identifiers worldwide [^ref:iana-about].
+While the Domain Name System (DNS) is foundational to the internet's global
+functionality, its inherent centralized control points, particularly at the root
+At this level, it introduces significant political vulnerabilities and risks.
+The Internet Assigned Numbers Authority (IANA), operating under the Internet
+Corporation for Assigned Names and Numbers (ICANN) manages the DNS root zone.
+Although this centralized coordination is broadly deemed indispensable for
+global internet stability and interoperability, ensuring consistent unique
+identifiers worldwide[^iana-about], it simultaneously creates a crucial point of
+leverage for political influence.
 
-However, this centrality, despite the geographically distributed nature of
-root server instances, creates complex problems and risks. The primary concerns
-revolve around the potential for IANA's functions to act as a single point of
-failure (SPOF) for the internet's technical infrastructure, specifically at the
-policy and data management layers [^ref:old_dominion-brief_review_of_dns]. In other words, while individual root servers are robust against physical attacks,
-the vulnerability lies in centralized control over the authoritative root
-zone file, which defines the internet's top-level structure. This singular point
-of control can be leveraged for political influence
-[^ref:old_dominion-brief_review_of_dns].
+The primary concern is that IANA's functions represent a single point of failure
+(SPOF) not necessarily in terms of technical resilience against physical
+attacks, but critically at the policy and data management
+layers[^old_dominion-brief_review_of_dns]. This centralized control over the
+authoritative root zone file—which dictates the internet's top-level
+structure—exposes the entire system to political pressure, manipulation, and
+censorship. Such vulnerabilities fundamentally undermine the internet's core
+principles of openness and neutrality, contributing to the increasing threat of
+Internet fragmentation, often termed the "Splinternet," which jeopardizes global
+interoperability and communication[^european_union-internet_governance]. The
+historical role of the U.S. government and ongoing concerns about its influence
+over ICANN, despite the multi-stakeholder model, further highlight that control
+in Internet governance is a complex sociotechnical and political issue,
+extending beyond mere technical operations.
 
-This centralized control also exposes the DNS to the risk of political influence
-and censorship, fundamentally undermining the internet's core principles of
-openness and neutrality and also leads to increased internet fragmentation,
-often referred to as the "Splinternet," which jeopardizes global
-interoperability and communication [^ref:european_union-internet_governance].
+A direct manifestation of this political vulnerability is DNS-based blocking and
+manipulation, a prevalent method of internet censorship. This process interferes
+with DNS resolution, the initial step in accessing online resources. Authorities
+can compel Internet Service Providers (ISPs) to configure their DNS servers to
+prevent access to specific websites—either by failing to return an IP address,
+redirecting users to government-approved pages, or even to deceptive fake
+versions of the site [^tatua-what_is_censorship]. ISPs' ability to mandate
+the use of their designated DNS servers for customer devices provides them with
+a powerful mechanism for control and censorship.
 
-A direct consequence of this centralization is DNS-based blocking and
-manipulation, a prevalent method of internet censorship. This operates by
-interfering with the DNS resolution process, the initial step in accessing any
-online resource. When a user attempts to access a censored website, the DNS
-server can be configured to fail to return an IP address, redirect the user to
-an alternative page (like a government-approved message), or even point to a
-fake version of the prohibited website [^ref:tatua-what_is_censorship]. Such
-interference is most commonly enforced at the Internet Service Provider (ISP)
-level, as ISPs can compel their customers' devices to use their designated DNS
-servers, thus gaining control over the resolution process.
+Real-world incidents vividly illustrate how these centralized control points
+enable political and state-level interference. For instance, in November 2021,
+users in Mexico received bogus DNS responses for <whatsapp.net>. This was caused
+by a BGP (Border Gateway Protocol) route leak, where a network inadvertently or
+intentionally advertised incorrect routing information. This misdirection
+diverted DNS queries to a local instance of a root name server located in China.
+These rerouted queries then passed through middleboxes—network devices that can
+inspect and alter traffic—which injected fake DNS
+responses[^delft_university-intercept_and_inject]. Similar incidents of BGP
+route leaks leading to DNS manipulation by state-controlled infrastructure in
+China were reported in 2010 and 2011, affecting domains like <twitter.com> and
+<facebook.com>[^delft_university-intercept_and_inject]. More recently, in In
+August 2024, Brazil's Supreme Court imposed a ban on X (formerly Twitter),
+compelling ISPs to block access by configuring their DNS systems to withhold the
+platform's IP addresses [^reason_foundation-x_ban]
+[^olhar_digital-como_e_feito_o_bloqueio].
 
-Real-world incidents vividly illustrate these vulnerabilities, especially
-concerning internet routing manipulation. For example, in November 2021, users
-in Mexico received bogus DNS responses for whatsapp.net. This occurred due to a
-BGP (Border Gateway Protocol) route leak. BGP is the internet's fundamental
-routing protocol for exchanging path information between different networks
-(Autonomous Systems). A route leak happens when a network incorrectly advertises
-routes for IP addresses it doesn't legitimately control, or for paths it
-shouldn't propagate. In this incident, the BGP route leak inadvertently diverted
-DNS queries destined for <whatsapp.net> to a local instance of a root name
-server in China. These rerouted queries then encountered "middleboxes" (network
-devices designed to inspect and sometimes alter traffic) that injected fake DNS
-responses [^ref:delft_university-intercept_adn_inject]. Similar root traffic
-manipulations were reported in 2010 and 2011, where other BGP route leaks made
-China-located root instances globally available, leading to queries for domains
-like twitter.com and facebook.com being answered with incorrect IP addresses
-[^ref:delft_university-intercept_adn_inject]. More recently, in August 2024,
-Brazil's Supreme Court imposed a ban on X (formerly Twitter), with ISPs
-compelled to block access by configuring their DNS systems to not serve IP
-addresses for the platform [^ref:reason_foundation-x_ban]
-[^ref:olhar_digital-como_e_feito_o_bloqueio].
+Beyond direct censorship, the current DNS system also suffers from a significant
+lack of transparency and accountability. Decisions regarding domain
+registrations, updates, and resolutions are frequently made within the opaque
+confines of domain registrars and governing bodies, offering end-users limited
+insight into these processes. This opacity further underscores the systemic
+weaknesses in the DNS ecosystem's security, resilience, and trustworthiness.
+
+These examples underscore that despite its technical distribution, the DNS's
+centralized governance and operational choke points pose significant threats to
+Internet freedom, accessibility, and neutrality, highlighting an urgent need for
+more resilient and decentralized naming solutions.
 
 ## 2. What is the solution to my problem?
 
@@ -332,28 +339,32 @@ addresses for the platform [^ref:reason_foundation-x_ban]
 
 ## References
 
-[ref:cloudflare-what_is_dns]: [Cloudflare; What is DNS? | How DNS works](https://www.cloudflare.com/learning/dns/what-is-dns/)
+<!-- ### Introduction -->
 
-[ref:rfc_1034]: [DOMAIN NAMES - IMPLEMENTATION AND SPECIFICATION](https://www.ietf.org/rfc/rfc1034.txt)
+[^cloudflare-what_is_dns]: [Cloudflare; What is DNS? | How DNS works](https://www.cloudflare.com/learning/dns/what-is-dns/)
 
-[ref:iana-root_zone_management]: [IANA; Root Zone Management](https://www.iana.org/domains/root)
+[^rfc_1034]: [DOMAIN NAMES - IMPLEMENTATION AND SPECIFICATION](https://www.ietf.org/rfc/rfc1034.txt)
 
-[ref:iso_3166]: [ISO 3166 - Códigos de país](https://www.iso.org/iso-3166-country-codes.html)
+[^iana-root_zone_management]: [Root Zone Management](https://www.iana.org/domains/root)
 
-[ref:rfc_1591]: [Domain Name System Structure and Delegation](https://www.ietf.org/rfc/rfc1591.txt)
+[^iso_3166]: [ISO 3166 - Códigos de país](https://www.iso.org/iso-3166-country-codes.html)
 
-[ref:rfc_2132]: [DHCP Options and BOOTP Vendor Extensions](https://www.ietf.org/rfc/rfc2132.txt)
+[^rfc_1591]: [Domain Name System Structure and Delegation](https://www.ietf.org/rfc/rfc1591.txt)
 
-[ref:iana-about]: [IANA - About us](https://www.iana.org/about)
+[^rfc_2132]: [DHCP Options and BOOTP Vendor Extensions](https://www.ietf.org/rfc/rfc2132.txt)
 
-[ref:old_dominion-brief_review_of_dns]: [A Brief Re A Brief Review of DNS, Root Ser view of DNS, Root Servers, Vulnerabilities and abilities and Decentralization](https://digitalcommons.odu.edu/cgi/viewcontent.cgi?article=1014&context=covacci-undergraduateresearch)
+[^rfc_1035]: [DOMAIN NAMES - IMPLEMENTATION AND SPECIFICATION](https://www.rfc-editor.org/rfc/rfc1035.html)
 
-[ref:european_union-internet_governance]: [European Union; Internet Governance](https://www.europarl.europa.eu/RegData/etudes/BRIE/2024/766272/EPRS_BRI(2024)766272_EN.pdf)
+[^iana-about]: [IANA - About us](https://www.iana.org/about)
 
-[ref:tatua-what_is_censorship]: [tatua; What is Censorship and What Tools Can SJOs Use to Bypass Restricted Content?](https://tatua.digital/services/what-is-censorship-and-what-tools-can-sjos-use-to-bypass-restricted-content/)
+[^old_dominion-brief_review_of_dns]: [A Brief Re A Brief Review of DNS, Root Ser view of DNS, Root Servers, Vulnerabilities and abilities and Decentralization](https://digitalcommons.odu.edu/cgi/viewcontent.cgi?article=1014&context=covacci-undergraduateresearch)
 
-[ref:delft_university-intercept_and_inject]: [Delft University of Technology; Intercept and Inject](https://pure.tudelft.nl/ws/portalfiles/portal/151232870/978_3_031_28486_1_19.pdf)
+[^european_union-internet_governance]: [European Union; Internet Governance](https://www.europarl.europa.eu/RegData/etudes/BRIE/2024/766272/EPRS_BRI(2024)766272_EN.pdf)
 
-[ref:reason_foundation-x_ban]: [Reason Foundation; How Brazil’s X ban signals growing control over online free speech](https://reason.org/commentary/how-brazils-x-ban-signals-growing-control-over-online-free-speech/)
+[^tatua-what_is_censorship]: [tatua; What is Censorship and What Tools Can SJOs Use to Bypass Restricted Content?](https://tatua.digital/services/what-is-censorship-and-what-tools-can-sjos-use-to-bypass-restricted-content/)
 
-[ref:olhar_digital-como_e_feito_o_bloqueio]: [Olhar Digital; Como é feito o bloqueio de uma rede social no Brasil?](https://olhardigital.com.br/2024/08/29/pro/como-e-feito-o-bloqueio-de-uma-rede-social-no-brasil)
+[^delft_university-intercept_and_inject]: [Delft University of Technology; Intercept and Inject](https://pure.tudelft.nl/ws/portalfiles/portal/151232870/978_3_031_28486_1_19.pdf)
+
+[^reason_foundation-x_ban]: [Reason Foundation; How Brazil’s X ban signals growing control over online free speech](https://reason.org/commentary/how-brazils-x-ban-signals-growing-control-over-online-free-speech/)
+
+[^olhar_digital-como_e_feito_o_bloqueio]: [Olhar Digital; Como é feito o bloqueio de uma rede social no Brasil?](https://olhardigital.com.br/2024/08/29/pro/como-e-feito-o-bloqueio-de-uma-rede-social-no-brasil)
