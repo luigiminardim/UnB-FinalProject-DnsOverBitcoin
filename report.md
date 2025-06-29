@@ -325,12 +325,97 @@ more resilient and decentralized naming solutions.
 
 ## 2. What is the solution to my problem?
 
-<!-- Could blockchain (really) replace DNS? https://www.afnic.fr/wp-media/uploads/2024/06/Could-Blockchain-really-replace-DNS-Afnic-Issue-Paper.pdf -->
-<!-- What is Bitcoin? -->
-<!-- What are the Bitcoin properties wanted? -->
-<!-- What is Nostr? -->
-<!-- What are the properties wanted from Nostr -->
-<!-- BTC + Nost, How they fit together? -->
+To address the inherent vulnerabilities and centralized control points of the
+traditional Domain Name System (DNS), blockchain-based naming systems (BDNS)
+offer a paradigm shift. This approach leverages blockchain technology to
+architect a more resilient, secure, and censorship-resistant internet naming
+infrastructure, liberating the system from its reliance on central authorities
+like ICANN, domain registries, and registrars [^afnic-blockchain_replace_dns].
+
+The core tenets of blockchain—decentralization, immutability, and cryptographic
+security—directly counteract the weaknesses of the current DNS. By recording and
+replicating information across a distributed network of nodes, a BDNS eliminates
+the single points of failure that make the traditional system susceptible to
+technical outages and political pressure [^southampton-blockchain_based_dns].
+This distributed architecture not only enhances resilience against attacks like
+Distributed Denial of Service (DDoS) it also renders the data exceptionally
+difficult to falsify [^afnic-blockchain_replace_dns]. Consequently, it becomes
+nearly impossible for any single entity to block, seize, or censor a domain name
+through administrative or legal coercion—a direct countermeasure to the
+censorship mechanisms prevalent today [^afnic-blockchain_replace_dns].
+
+Furthermore, using an immutable public ledger enhances the security and
+transparency of the entire domain management lifecycle. Every registration and
+modification is recorded as a cryptographically secured transaction, creating a
+tamper-proof and auditable ownership history. BDNS allows network participants
+to independently validate domain ownership and data integrity without trusting a
+central intermediary [^southampton-blockchain_based_dns].
+
+This unique, verifiable, and user-controlled digital ownership model finds a
+natural and robust technical implementation in Non-Fungible Tokens (NFTs). An
+NFT is a unique cryptographic token on a blockchain that represents ownership of
+a specific asset, such as a domain name [^open_sea-what_are_nft_domain_names].
+The "non-fungible" property is critical; just as every domain name (e.g.,
+example.com) is unique, each NFT is distinct and cannot be interchanged on a
+one-to-one basis, making them ideally suited to represent exclusive domain
+ownership [^open_sea-what_is_nft?]. This model transforms domain ownership from
+a temporary lease, contingent on periodic renewals with a registrar, into a
+persistent digital asset fully controlled by the user. This shift to actual
+ownership is a foundational principle of the proposed solution
+[^open_sea-what_are_nft_domain_names].
+
+While numerous blockchains can support NFTs, Bitcoin presents a particularly
+compelling foundation for a global naming system. Launched in 2009 by Satoshi
+Nakamoto, Bitcoin's defining feature is its unparalleled security, which is a
+direct function of its Proof of Work (PoW) consensus mechanism
+[^satoshi-nakamoto_bitcoin]. The immense and continuously accumulating
+computational work required to validate transactions makes the Bitcoin's
+blockchain extraordinarily resistant to attack and manipulation, providing the
+robust foundation of trust necessary for critical infrastructure like DNS
+[^van_eck-bitcoin_vs_ethereum].
+
+Moreover, Bitcoin's long-standing market dominance and vast network effect
+signal its stability and long-term viability, crucial attributes for a service
+intended to be permanent and globally accessible
+[^coinmarketcap-bitcoin_dominance]. By leveraging Bitcoin's native security,
+this project proposes a system where domain ownership is anchored directly
+on-chain. The following sections will detail how specific protocols built upon
+Bitcoin can enable the inscription of these domain NFTs, establishing ownership
+with an unprecedented level of immutability and censorship resistance, thereby
+forming the core of the DNS-Nostr architecture.
+<!-- 
+
+### What is Bitcoin?
+
+- Diferent from Ethereum, Bitcoin does not have smart contracts, so instead of creating a contract, it's need to discover how to make this type of nft in Bitcoin.
+- Explain transactions,
+- Explain Scripts,
+- Explain Blockchain,
+- What are the properties wanted from Bitcoin?
+
+## Name Tokens Protocol
+
+- Principles of the Name Tokens Protocol
+- What is the Name Tokens Protocol?
+- Why not place the records in the Bitcoin blockchain?
+- An off chain solution.  
+
+### What is Nostr?
+
+- What are the properties wanted from Nostr?
+- What are the properties wanted from Nostr
+
+### DNS-Nostr Tokens Protocol
+
+- How does the DNS-Nostr Tokens Protocol work?
+- Full scenario of how the DNS-Nostr Tokens Protocol works.
+  - Create a domain;
+  - Resolve an dns query.
+  - Update records;
+  - Transfer domain ownership;
+  - Revoke a domain;
+
+-->
 
 ## 3. My solution solves the problem?
 <!-- Does DNS becomes more uncensorable? -->
@@ -339,7 +424,7 @@ more resilient and decentralized naming solutions.
 
 ## References
 
-<!-- ### Introduction -->
+<!-- # Introduction -->
 
 [^cloudflare-what_is_dns]: [Cloudflare; What is DNS? | How DNS works](https://www.cloudflare.com/learning/dns/what-is-dns/)
 
@@ -367,4 +452,19 @@ more resilient and decentralized naming solutions.
 
 [^reason_foundation-x_ban]: [Reason Foundation; How Brazil’s X ban signals growing control over online free speech](https://reason.org/commentary/how-brazils-x-ban-signals-growing-control-over-online-free-speech/)
 
-[^olhar_digital-como_e_feito_o_bloqueio]: [Olhar Digital; Como é feito o bloqueio de uma rede social no Brasil?](https://olhardigital.com.br/2024/08/29/pro/como-e-feito-o-bloqueio-de-uma-rede-social-no-brasil)
+<!-- ## What is the solution to my problem? -->
+
+[^southampton-blockchain_based_dns]: [Blockchain-based DNS: Current Solutions and
+Challenges to Adoption](https://ceur-ws.org/Vol-3791/paper16.pdf)
+
+[^afnic-blockchain_replace_dns]: [Could blockchain really replace DNS?](https://www.afnic.fr/wp-media/uploads/2024/06/Could-Blockchain-really-replace-DNS-Afnic-Issue-Paper.pdf)
+
+[^open_sea-what_are_nft_domain_names]: [OpenSea; What are NFT domain names?](https://opensea.io/learn/nft/what-are-nft-domain-names#:~:text=A%20domain%20name%20NFT%20stores,domain.)
+
+[^open_sea-what_is_nft?]: [OpenSea; What is an NFT?](https://opensea.io/learn/nft/what-are-nfts)
+
+[^satoshi-nakamoto_bitcoin]: [Satoshi Nakamoto; Bitcoin: A Peer-to-Peer Electronic Cash System](https://bitcoin.org/bitcoin.pdf)
+
+[^van_eck-bitcoin_vs_ethereum]: [Van Eck Associates Corporation; Bitcoin vs. Ethereum in 2025: Comparison & Outlook](https://www.vaneck.com/us/en/blogs/digital-assets/bitcoin-vs-ethereum/)
+
+[^coinmarketcap-bitcoin_dominance]: [CoinMarketCap; Bitcoin Dominance](https://coinmarketcap.com/charts/bitcoin-dominance/)
