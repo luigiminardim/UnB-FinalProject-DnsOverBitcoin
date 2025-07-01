@@ -383,6 +383,343 @@ on-chain. The following sections will detail how specific protocols built upon
 Bitcoin can enable the inscription of these domain NFTs, establishing ownership
 with an unprecedented level of immutability and censorship resistance, thereby
 forming the core of the DNS-Nostr architecture.
+
+### 2.1 How Bitcoin Works?
+
+To understand how domain ownership can be anchored in Bitcoin, one must first
+grasp its fundamental architecture, which differs significantly from modern
+blockchains. The primary distinction lies in Bitcoin's intentionally limited
+scripting capabilities. Unlike Ethereum, Bitcoin does not feature
+Turing-complete smart contracts. A Turing-complete system can, with enough
+resources, compute anything computable, allowing developers to write code for
+virtually any arbitrary state transition function [^vitalik_buterin-etherium].
+On Ethereum, this enables complex, stateful "smart contracts" to manage an
+entire collection of NFTs—dictating their properties, minting rules, and
+ownership transfers within a sophisticated program. On the other hand,
+developers must creatively combine its simpler base components to create a
+similar system on Bitcoin.
+
+We will explore this from the top down: first, the overall structure of the
+blockchain ledger; second, the UTXO set that represents ownership; third, the
+transactions that update this state, and finally, the Script language that
+enforces the ownership rules.
+
+### 2.1.1 The Blockchain Ledger and Proof of Work
+
+The Bitcoin blockchain is a public, ordered, back-linked list of transaction
+blocks. It is often visualized as a vertical stack, where each new block is
+placed on top of the previous one, creating a chain that extends back to the
+first block, the Genesis block. This structure gives rise to terms like
+"height," which refers to a block's position in the chain relative to the
+genesis block.
+
+The integrity and immutability of this chain are secured through cryptography.
+Each block contains a header with critical metadata, including a timestamp, a
+single cryptographic hash (known as the Merkle root) that serves as a compact
+summary of all transactions within that block, and, most importantly, a
+cryptographic hash of the previous block's header. This "previous block hash"
+acts as a pointer, linking each block to its parent. This hash is also a key
+input for calculating the current block's hash. As a result, any alteration to a
+historical block would change its hash, invalidating the "previous block hash"
+pointer in the subsequent block causing a cascading invalidation to the tip of
+the chain.
+
+The diagram below illustrates this structure, showing how Block 2 contains a
+hash pointing to Block 1, which in turn points to Block 0, forming an
+cryptographic chain.
+
+```mermaid
+---
+title: Blockchain Structure
+---
+graph RL
+   subgraph block_0["Block 0"]
+      direction LR
+      tx_0_0["Tx 00"]
+      tx_0_1["Tx 01"]
+   end
+
+   subgraph block_1["Block 1"]
+      direction LR
+      tx_1_0["Tx 10"]
+      tx_1_1["Tx 11"]
+   end
+
+   subgraph block_2["Block 2"]
+      direction LR
+      tx_2_0["Tx 20"]
+      tx_2_1["Tx 21"]
+      tx_2_2["Tx 22"]
+   end
+
+   block_1 -->|Prev Hash| block_0
+   block_2 -->|Prev Hash| block_1
+```
+
+This chain reaction is what makes the blockchain's history so difficult to
+change. To successfully alter a past block, an attacker would need to re-do the
+work for that block and all subsequent blocks. Bitcoin's consensus mechanism,
+Proof of Work (PoW), makes this computationally and economically impractical. To
+produce a new valid block, network participants known as "miners" select a set
+of unconfirmed transactions and compete to find a valid hash for the new block's
+header that meets a specific difficulty target. This process involves repeatedly
+hashing the block header with a different random value (called a nonce) until a
+valid solution is found. The network automatically adjusts this difficulty
+target approximately every two weeks to ensure that, on average, a new block is
+added to the chain roughly every 10 minutes.
+
+The existence of a long chain of blocks, each secured by this intensive work,
+proves that the history of transactions is authentic and cannot be changed
+without re-expending an infeasible amount of energy. To incentivize this
+computationally expensive work, miners receive a reward. The first transaction
+in any block is a special coinbase transaction, created by the miner, which
+serves two purposes: it mints entirely new bitcoins (the "block subsidy") and
+collects the fees from all other transactions included in the block. The block
+subsidy is a fixed amount that diminishes over time, halving approximately every
+four years (or 210,000 blocks) to control the currency's supply, ensuring a
+maximum of 21 million bitcoins will ever exist.
+
+This system creates a market for block space. Each Bitcoin block is limited in
+the amount of data it can contain, currently capped at 4 million weight units (a
+modern measurement that replaced the simple byte count). Because space in each
+new block is scarce, users who want to ensure their transactions are confirmed
+quickly must include a transaction fee. Miners, who are economically rational,
+will prioritize transactions with higher fees to maximize their reward from the
+coinbase transaction. This creates a competitive fee market where users
+effectively bid to have their transactions included in the next block, forming a
+crucial part of Bitcoin's economic security model that will sustain the network
+even after the block subsidy eventually ends.
+
+### 2.1.2 State and Transactions
+
+In Bitcoin, the current state of the blockchain is represented by the Unspent
+Transaction Output (UTXO) set. A UTXO is an amount of bitcoin locked to a
+specific owner with the power to spend it. Think of the UTXO set as a global,
+public ledger of all spendable bitcoin chunks currently in existence. Possessing
+a particular UTXO, usually locked by a private key, constitutes ownership in the
+Bitcoin network[^andreas_antonopoulos-mastering_bitcoin].
+
+To transfer ownership of bitcoins in the network, users create transactions,
+which are signed data structures that act as a request to update the UTXO set.
+In simple terms, a transaction does two things:
+
+1. It consumes one or more existing UTXOs as inputs. These are the funds being
+   spent. Once consumed, these UTXOs are removed from the global UTXO set, as
+   they are no longer "unspent".
+2. It creates one or more new UTXOs as outputs. These new UTXOs represent the
+   transferred value that is now locked to new owners and are added to the
+   global UTXO set.
+
+The following diagram illustrates a single transaction. It consumes two existing
+UTXOs (worth 5 BTC and 3 BTC) for a total input value of 8 BTC. It then creates
+two new UTXOs as outputs: one for 6 BTC and another for 1 BTC. The total output
+value is 7 BTC. The 1 BTC difference between the inputs and outputs is not lost;
+it is the transaction fee claimed by the miner who includes this transaction in
+a block.
+
+```mermaid
+graph LR
+
+   utxo0((5BTC))
+   utxo1((3BTC))
+
+   subgraph Transaction
+      direction LR
+      subgraph inputs[ ]
+         direction TB
+         input0[Input 0]
+         input1[Input 1]
+      end
+      subgraph Outputs[ ]
+         direction TB
+         output0[Output 0]
+         output1[Output 1]
+      end
+   end
+
+   utxo2((6BTC))
+   utxo3((1BTC))
+
+   utxo0 --> input0
+   utxo1 --> input1
+   output0 --> utxo2
+   output1 --> utxo3
+
+```
+
+This process forms a continuous "transaction chain," where the outputs of one
+transaction become the potential inputs for a future transaction. Each
+transaction must contain a digital signature that proves ownership of the inputs
+being spent, which any node on the network can independently
+validate[^andreas_antonopoulos-mastering_bitcoin]. The diagram below shows
+this chain of dependency: an initial 60 BTC UTXO is spent in Transaction 0,
+which creates two new outputs. The first output (10 BTC) is later consumed as
+the input for Transaction 1, which in turn creates a 9 BTC output that becomes
+the input for Transaction 2. This demonstrates how value flows from one
+transaction to the next over time.
+
+```mermaid
+graph LR
+   utxo_start((60BTC))
+
+   subgraph transaction_0["Transaction 0"]
+      direction LR
+      subgraph inputs_0[ ]
+         direction TB
+         input0[Input 0]
+      end
+      subgraph outpus_0[ ]
+         direction TB
+         output00[Output 0]
+         output01[Output 1]
+      end
+   end
+
+   utxo_start --> input0
+   output01 --> utxo_0((49 BTC))
+
+   subgraph transaction_1["Transaction 1"]
+      direction LR
+      subgraph inputs_1[ ]
+         direction TB
+         input10[Input 0]
+      end
+      subgraph outputs_1[ ]
+         direction TB
+         output10[Output 0]
+      end
+   end
+
+   output00 -->|10 BTC| input10
+
+   subgraph transaction_2["Transaction 2"]
+      direction LR
+      subgraph inputs_2[ ]
+         direction TB
+         input20[Input 0]
+      end
+      subgraph outputs_2[ ]
+         direction TB
+         output20[Output 0]
+         output21[Output 1]
+      end
+   end
+
+   output10 -->|9 BTC| input20
+   output20 --> utxo_20((2 BTC))
+   output21 --> utxo_21((2 BTC))
+
+```
+
+A transaction is only considered final once it has been included in a valid
+block and added to the blockchain. This is known as transaction confirmation.
+The order in which transactions officially affect the ledger is strictly
+determined by their position in the blockchain. This order is defined first by
+the height of the block they are in, and then by their specific index (their
+position) within that block. This ensures that every node in the network
+processes the history of state changes in the exact same sequence.
+
+The transaction fee is a crucial element for getting a transaction confirmed. It
+is calculated implicitly as the sum of a transaction's inputs minus the sum of
+its outputs. As miners are incentivized to maximize their profit, they
+prioritize transactions that offer a higher fee relative to their size. This
+means users must be mindful of their transaction's size, as a larger transaction
+generally requires a higher total fee to be competitive. The primary factors
+affecting transaction size are the number of inputs (which typically contribute
+the most to the size), the number of outputs, and the complexity of the Script
+code within them.
+
+As can be seen, every UTXO has a permanent and unique position on the blockchain
+that allows it to be precisely identified. This position is defined by the
+combination of the transaction ID (*txid*) of the transaction that created it
+and its output index within that transaction's list of outputs (often denoted as
+vout, starting from 0). This (*txid*, *vout*) pair is a unique pointer to a
+specific spendable output in the entire history of the blockchain.
+Alternatively, once a transaction is confirmed, its UTXOs can also be located by
+their physical position in the ledger: their block height (*blockheight*), their
+index within that block (*blockindex*), and their specific output index, forming
+the triplet (*blockheight*, *blockindex*, *vout*).
+
+### 2.1.3 Bitcoin Script: Enforcing Ownership Rules
+
+The "lock" on a UTXO is a small program written in Bitcoin's Script language.
+Every UTXO has a locking script (technically known as scriptPubKey) that defines
+the conditions required to spend it. To spend that UTXO, a new transaction must
+provide a corresponding unlocking script (or scriptSig) in its input that
+satisfies these conditions.
+
+Bitcoin's scripting language, `Script`, is purposefully non-Turing-complete. It
+lacks loops and complex state-handling capabilities, making it more predictable,
+secure, and less prone to complex bugs. Consequently, creating an NFT-like
+system on Bitcoin is more challenging. It is impossible to deploy a single,
+all-encompassing contract to manage a domain registry. Instead, the desired
+functionality must be built by combining Bitcoin's simpler base
+components—transactions and UTXOs—in clever ways to represent the state and
+ownership of unique digital assets.
+
+The Bitcoin Script is a stack-based language. Operations are executed
+sequentially, pushing data onto and popping data off a data structure called a
+stack. A common legacy script known as "Pay-to-Public-Key-Hash" (P2PKH) locks a
+UTXO to the hash of a public key. The locking script looks like this:
+
+```bash
+OP_DUP
+OP_HASH160
+OP_PUSH $PUBLIC_KEY_HASH
+OP_EQUALVERIFY
+OP_CHECKSIG
+```
+
+To spend this UTXO, the owner must provide an unlocking script containing their
+full public key and a valid digital signature for the transaction. A
+corresponding unlocking script might look like this:
+
+```bash
+OP_PUSH $SIGNATURE
+OP_PUSH $PUBLIC_KEY
+```
+
+To validate the transaction, the Bitcoin network executes the unlocking script
+followed immediately by the locking script. The process is valid if, at the end
+of the execution, the top item on the stack is TRUE (represented by any "truthy"
+value, i.e., any nonzero and non-empty value).
+
+Let's walk through the P2PKH validation step-by-step:
+
+1. **Initial State:** The process begins with an empty stack.
+2. **Execute Unlocking Script:** First, the items from the unlocking script are pushed onto the stack. The `SIGNATURE` is pushed, followed by the `PUBLIC_KEY`.
+3. **Execute Locking Script:** Now, the opcodes from the locking script are executed one by one:
+   - **OP_DUP:** Duplicates the top item on the stack (the `PUBLIC_KEY`).
+   - **OP_HASH160:** Pops the top item (`PUBLIC_KEY`), hashes it, and pushes the resulting `RESULT_PUBLIC_KEY_HASH` back onto the stack.
+   - **Push `PUBLIC_KEY_HASH`**: The public key hash specified in the original locking script is pushed onto the stack for comparison.
+   - **OP_EQUALVERIFY:** Pops the top two items (the two public key hashes) and
+     compares them. If they are not equal, the script fails immediately. If they
+     are equal, they are simply removed, and execution continues. This verifies
+     the provided public key matches the one required by the lock.
+   - **OP_CHECKSIG:** Pops the final two items (`PUBLIC_KEY` and `SIGANTURE`).
+     It verifies that the signature is valid for this transaction using the
+     provided public key. If it is valid, it pushes TRUE onto the stack.
+
+This entire security model is built upon the foundation of asymmetric
+cryptography. The `OP_CHECKSIG` opcode is the crucial step in enforcing this
+principle. It uses the properties of digital signatures for authentication. When
+the script runs, `OP_CHECKSIG` takes the public key and the digital signature
+and mathematically verifies that the signature could only have been created by
+the owner of the corresponding private key for this specific transaction. This
+process proves that the spender is the legitimate owner of the UTXO without
+their private key ever being exposed on the network, thus securely authorizing
+the transfer of value. The deterministic and simple nature of Script ensures
+that every node on the network can independently and reliably come to the same
+conclusion about a transaction's validity.
+
+<!-- 
+
+### 2.2 Name Tokens Protocol
+
+Bitcoin’s distributed and timestamped blockchain has potential uses beyond pay‐ ments. Many developers have tried to use the transaction scripting language to take advantage of the security and resilience of the system for applications such as digital notary services. Early attempts to use Bitcoin’s script language for these purposes involved creating transaction outputs that recorded data on the blockchain; for exam‐ ple, to record a commitment to a file in such a way that anyone could establish proof-of-existence of that file on a specific date by reference to that transaction.
+
+ -->
+
 <!-- 
 
 ### What is Bitcoin?
@@ -468,3 +805,7 @@ Challenges to Adoption](https://ceur-ws.org/Vol-3791/paper16.pdf)
 [^van_eck-bitcoin_vs_ethereum]: [Van Eck Associates Corporation; Bitcoin vs. Ethereum in 2025: Comparison & Outlook](https://www.vaneck.com/us/en/blogs/digital-assets/bitcoin-vs-ethereum/)
 
 [^coinmarketcap-bitcoin_dominance]: [CoinMarketCap; Bitcoin Dominance](https://coinmarketcap.com/charts/bitcoin-dominance/)
+
+[^vitalik_buterin-etherium]: [Vitalik Buterin; Ethereum: A Next-Generation Smart Contract and Decentralized Application Platform](https://ethereum.org/content/whitepaper/whitepaper-pdf/Ethereum_Whitepaper_-_Buterin_2014.pdf)
+
+[^andreas_antonopoulos-mastering_bitcoin]: Andreas M. Antonopoulos & David A. Harding; Mastering Bitcoin
