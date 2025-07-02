@@ -712,39 +712,333 @@ the transfer of value. The deterministic and simple nature of Script ensures
 that every node on the network can independently and reliably come to the same
 conclusion about a transaction's validity.
 
+### 2.2 Name-Token Protocol
+
+One of the primary challenges of tokenizing assets on Bitcoin is establishing a
+stable identifier. Bitcoin's architecture is based on Unspent Transaction
+Outputs (UTXOs), which are consumed and destroyed every time they are spent.
+This transient nature makes it difficult to create a persistent digital token
+that can be reliably tracked, updated, and revoked without a specialized
+protocol.
+
+To solve this, this project introduces Name-Token, a novel protocol designed
+specifically to manage unique names and associate them with arbitrary data
+directly on the Bitcoin blockchain. The protocol treats each unique name as a
+distinct digital asset, represented by a single UTXO. The ownership and history
+of these Name-Tokens are immutably recorded, providing the stable, verifiable
+identifier that is otherwise difficult to achieve.
+
+The creation, management, and validity of Name-Tokens are governed by a concise
+set of principles. These rules ensure uniqueness and create a predictable
+lifecycle for each named asset by leveraging the inherent structure of Bitcoin
+transactions.
+
+1. **Unique Representation:** Each unique Name-Token is represented by a single,
+   distinct Unspent Transaction Output (UTXO). The token's existence and state
+   are embodied by this UTXO.
+2. **Inscribed Metadata:** All relevant data for a Name-Token, including its
+   label and associated parameters, are permanently inscribed within the
+   blockchain.
+3. **State Verification via UTXO Scan:** The current set of all valid Name-Tokens is
+   determined by scanning the Bitcoin UTXO set for outputs that conform to the
+   protocol's specified inscription format.
+4. **First-is-Root Uniqueness:** For any given label, only one Name-Token can be
+   valid at a time. The "First-is-Root" rule dictates that the chronologically
+   first-minted (earliest confirmed) token for a label is the only valid one.
+   Any subsequent attempt to mint a token with the same label is invalid unless
+   all older, valid tokens with that label have first been revoked.
+5. **Continuity via Same-Index Chain:** The history and continuity of a
+   Name-Token are maintained across transactions via a positional link. To
+   update a token, its UTXO must be spent as an input, and a new UTXO with an
+   updated inscription must be created in the output of the same transaction and
+   at the same index.
+
+To fully define the protocol, it's essential to elaborate on the technical
+specifications and implications of each of these core principles. The following
+subsections detail how each rule is implemented and how they work together to
+create a robust system for managing names on the Bitcoin blockchain.
+
+#### 2.2.1 Unique Representation
+
+The fundamental design choice of the Name-Token protocol is to embody the
+token's entire existence and state within a single, distinct Unspent Transaction
+Output (UTXO). This approach ensures that each name is uniquely identifiable and
+can be independently updated, transferred, or revoked without ambiguity. This
+makes ownership unequivocal: control over the private key that can spend the
+UTXO constitutes control over the Name-Token. This UTXO serves as the
+definitive, on-chain proof of ownership and the current state of the name.
+
+#### 2.2.2 Inscribed Metadata
+
+For a Name-Token to be truly functional, it must carry relevant data. Bitcoin's
+blockchain has a long history of being utilized beyond simple payments, with
+early innovators embedding data within transaction outputs to harness the
+network's unparalleled security for diverse applications like digital notary
+services.
+
+While various methods have emerged over time, a common approach for embedding
+data involves an OP_RETURN output. This opcode creates a provably unspendable
+output designed solely to hold arbitrary data. However, the Name-Token protocol
+employs a more sophisticated "envelope" technique, leveraging `OP_FALSE`, `OP_IF`,
+and `OP_ENDIF` opcodes. This specific structure enables the inscription of
+metadata directly into the locking script of a standard, spendable transaction
+output. The critical innovation here is that because the data is encapsulated
+within an `OP_IF` block that is preceded by `OP_FALSE`, the enclosed opcodes are
+never executed. Standard Bitcoin nodes, therefore, treat the script as valid but
+ignore its encapsulated content, maintaining full compatibility with the
+network. Conversely, Name-Token-aware software can readily parse and interpret
+this embedded data.
+
+This ingenious envelope effectively splits the locking script into two conceptual parts:
+
+1. **Name-Token Envelope:** This is the `OP_FALSE OP_IF...OP_ENDIF` segment that
+   contains the inscribed metadata.
+
+2. **Non-Dead-Code Locking Script:** This is the standard Bitcoin script that
+   follows the OP_ENDIF and defines the actual spending conditions for the UTXO.
+   For instance, it could be a simple Pay-to-Public-Key-Hash (P2PKH) script
+   requiring a signature from the owner's private key. The presence of the
+   Name-Token inscription does not prevent the UTXO from being spent; it merely
+   adds metadata to it.
+
+The general structure of the Name-Token inscription within the locking script is
+as follows:
+
+```bash
+OP_FALSE
+OP_IF
+  OP_PUSH "name"            # Indicates that this inscription is from Name-Token protocol
+  OP_PUSH $label            # The token's label (e.g., "blog")
+  OP_NOP                    # Section separator
+  OP_PUSH $section_protocol # Identifier for the protocol using this token's data (e.g., "dns-nostr")
+  OP_PUSH $argument_0       # Protocol-specific argument (format depends on <section_protocol>)
+  # ...
+  # Additional protocol-specific sections can be added, each preceded by OP_NOP
+OP_ENDIF
+```
+
+
+<!-- Explain that this locking script has to parts: the name-token envelop and the non-dead-code locking script. Show in the example where would be this non-dead-code locking script -->
+The general structure of the Name-Token inscription is as follows:
+
+```bash
+OP_FALSE
+OP_IF
+  OP_PUSH "name"            # Namespace identifier (byte string)
+  OP_PUSH $label            # Represents the subdomain (e.g., "blog")
+  OP_NOP                    # Section separator
+  OP_PUSH $section_protocol # Identifier for the protocol using this token's data (e.g., "dns-nostr")
+  OP_PUSH $argument_0       # Protocol-specific argument (format depends on <section_protocol>)
+  # ...
+  # Additional protocol-specific sections can be added, each preceded by OP_NOP
+OP_ENDIF
+# [Non-dead-code locking script follows here, e.g., P2PKH script for spending]
+```
+
+Each line within the `OP_FALSE OP_IF ... OP_ENDIF` block serves a specific
+purpose, designed for extensibility and multi-protocol support. The initial
+`OP_PUSH` "name" acts as a magic number or protocol identifier, signaling that
+the subsequent data should be interpreted according to the Name-Token
+specification. The `$label` defines the specific name of the Name-Token,
+providing the actual naming component. The `OP_NOP` acts as a crucial separator,
+allowing the protocol to delineate distinct sections of metadata. This
+separation is particularly powerful for accommodating multiple protocols; the
+`$section_protocol` identifier, followed by its `$argument_0` and potentially
+more arguments, specifies how the following data should be interpreted by
+different applications built on top of Name-Tokens. This modular design ensures
+that the same underlying Name-Token UTXO can carry different types of metadata,
+relevant to various decentralized applications, without breaking compatibility.
+
+For a Name-Token UTXO with this inscription to be spent, an unlocking script
+must be provided that satisfies the non-dead-code locking script portion that
+follows the `OP_ENDIF`.
+
+For example, if the non-dead-code locking script is a standard P2PKH script
+(requiring a public key and a signature), an input unlocking script for a
+transaction spending this Name-Token UTXO would look like this:
+
+```bash
+OP_PUSH $SIGNATURE          # The digital signature for the transaction
+OP_PUSH $PUBLIC_KEY         # The public key corresponding to the private key that controls the UTXO
+```
+
+#### 2.2.3 State Verification via UTXO Scan
+
+The complete, current state of all Name-Tokens can be derived directly from
+Bitcoin's live UTXO set. This is a powerful feature, as it means the protocol's
+state is part of Bitcoin's own state, simplifing search of Name-Tokens in
+blockchain. An application finds the data associated with a name simply by
+finding its corresponding UTXO.
+
+It is critical to note that not all UTXOs are Name-Tokens. To identify a
+Name-Token, a client or indexer must scan the UTXO set and filter for only those
+outputs whose locking scripts contain a valid inscription that conforms to the
+protocol's `OP_FALSE OP_IF...OP_ENDIF` structure. Any UTXO that does not match
+this format is ignored by the protocol.
+
+#### 2.2.4 First-is-Root Uniqueness
+
+This fundamental principle dictates that while multiple Name-Tokens for a given
+label may exist, only one can be considered the valid, authoritative token at
+any given time. The valid token is unequivocally the one that was minted
+earliest chronologically, meaning it was confirmed at the lowest (earliest)
+block height. For instance, if Alice mints a Name-Token for "blog" in block
+800,000, and Bob subsequently attempts to mint a Name-Token for "blog" in block
+800,100, only Alice's token is recognized as valid. Bob's token, despite being
+on the blockchain, is considered an invalid mint attempt under this rule.
+
+Crucially, the "First-is-Root" rule introduces a notion of age or seniority to
+Name-Tokens. Older, earlier-minted tokens take precedence over newer ones. Bob's
+otherwise invalid "blog" token could only become valid if Alice's token, along
+with any other "blog" tokens minted between block 800,000 and 800,100, were
+first explicitly revoked or spent. This ensures a clear, unambiguous, and
+unforgeable ownership hierarchy, directly leveraging the Bitcoin blockchain's
+immutable timestamping and ordered nature to establish global uniqueness for
+each Name-Token label.
+
+#### 2.2.5 Continuity via Same-Index Chain
+
+The Name-Token protocol ensures a stable and auditable history for each token by
+enforcing a "same-index chain" or "input/output chain" rule. This mechanism
+creates a robust positional link between an input and its corresponding output
+within a transaction, allowing the token's lifecycle to be transparently tracked
+across the Bitcoin blockchain.
+
+<!-- TODO: show that this principle strongly correlates with the transaction chain -->
+
+With this principles, to update a token's data or transfer its ownership, the
+current UTXO must be spent as an input in a new transaction. A new UTXO
+containing the updated inscription must be created in an output at the exact
+same index. For example, if a token's UTXO is spent as the second input
+(input[1]), the updated token must be inscribed in the second output
+(output[1]). This same-index rule is the stable identifier that links a token's
+state across multiple transactions. A transfer is simply an update where the new
+output is locked to a new owner's key.
+
+This principle strongly correlates with the fundamental concept of the Bitcoin
+transaction chain, where the output of one transaction becomes the input of a
+subsequent one. The Name-Token protocol extends this by adding a crucial
+positional constraint. To update a token's inscribed data or transfer its
+ownership, the current Name-Token UTXO must be spent as an input in a new
+transaction. Crucially, a new UTXO containing the updated inscription must then
+be created in an output at the exact same index as the consumed input. For
+example, if a token's UTXO is consumed as the second input (at input[1]), the
+updated token must be inscribed in the second output (at output[1]) of the new
+transaction. This "same-index" rule acts as the stable identifier, consistently
+linking a token's state across an indefinite number of transactions. A transfer
+of ownership is simply a specific type of update where the new output is locked
+to a new owner's public key.
+
+Given that the principle of **State Verification via UTXO Scan** dictates that
+only the latest valid Name-Token inscription present in the UTXO set is
+considered active, a token is effectively "revoked" if its UTXO is spent and a
+corresponding valid Name-Token inscription with the same label is not created at
+the same output index. This ensures that a token's active status is always
+explicitly maintained or ended.
+
+The diagram below illustrates various scenarios of Name-Token lifecycle
+management within a single transaction, highlighting the "same-index chain"
+principle:
+
+```mermaid
+graph TB
+
+   subgraph Transaction
+      direction TB
+      subgraph link_0[ ]
+         direction LR
+         input0[Input 0]
+         output0[Output 0]
+      end
+      subgraph link_1[ ]
+         direction LR
+         input1[Input 1]
+         output1[Output 1]
+      end
+      subgraph link_2[ ]
+         direction LR
+         input2[Input 2]
+         output2[Output 2]
+      end
+      subgraph link_3[ ]
+         direction LR
+         input3[Input 3]
+         output3[Output 3]
+      end
+      subgraph link_4[ ]
+         direction LR
+         input4[Input 4]
+         output4[Output 4]
+      end
+      subgraph link_5[ ]
+         direction LR
+         output5[Output 5]
+      end
+   end
+
+   p2pkh0in((P2PKH)) --> input0
+   output0 --> p2pk0out((P2PKH))
+
+   p2pkh1in((P2PKH)) --> input1
+   output1 --> alice(("'alice' <br> _mint_"))
+
+   bob(("'bob' <br> _revoke_")) --> input2
+   output2 --> p2pkh2out((P2PKH))
+
+   carolin(("'carol'")) --> input3
+   output3 --> carolout(("'carol' <br> _update_"))
+
+   dave(("'dave' <br> _revoke_")) --> input4
+   output4 --> eve(("'eve' <br> _mint_"))
+
+   output5 --> alice2(("'alice' <br> _mint_"))
+```
+
+In this diagram, the central Transaction box represents a single Bitcoin
+transaction with multiple inputs and outputs. Each link conceptually groups an
+input with its corresponding output at the same index, visually representing the
+"same-index chain" rule. Breaking down the example:
+
+- **Link 0 (Standard Bitcoin Transfer):** a standard Pay-to-Public-Key-Hash UTXO
+  is consumed as Input 0, and a new P2PKH UTXO is created as Output 0. This
+  represents a typical Bitcoin transfer with no Name-Token involved at this
+  index.
+- **Link 1 (Minting "alice"):** A standard P2PKH UTXO is consumed as Input 1.
+  Output 1 then creates a new Name-Token, "alice", indicating its initial
+  minting. This is a fresh inscription at a specific index.
+- **Link 2 (Revoking "bob"):** The Name-Token "bob" is consumed as Input 2.
+  However, Output 2 creates a P2PKH UTXO, without a corresponding Name-Token
+  inscription at this index. This signifies that "bob" has been explicitly
+  revoked or ended.
+- **Link 3 (Updating "carol"):** The existing Name-Token "carol" is consumed as
+  Input 3. Critically, Output 3 then inscribes a Name-Token at the same index
+  with the same label, but with updated metadatas. This demonstrates how a
+  token's data or ownership can be modified while maintaining its identity
+  through the index.
+- **Link 4 (Reassignment/New Mint):** An existing Name-Token "dave" is consumed
+  as Input 4. Interestingly, Output 4 creates a new Name-Token, "eve". While
+  "dave" is effectively revoked at this index, a completely new Name-Token,
+  "eve", is minted in its place. This illustrates how a spent token's index can
+  be reused for a new token.
+- **Link 5 (Another Mint):** This shows an output creating a new Name-Token
+  "alice", without a corresponding input from a Name-Token. This would represent
+  a direct minting of a new "alice" token. This token, thought, is proovably
+  invalid since there is already a minted "alice" token in previous links of the
+  same transaction.
+
+<!--IGNORE IT GEMINI: Should I Talk about Floresta? A full node that keeps track of the UTXO set in contrast of the Bitcoin Core that doesn't have an API to scan? -->
+
 <!-- 
-
-### 2.2 Name Tokens Protocol
-
-Bitcoin’s distributed and timestamped blockchain has potential uses beyond pay‐ ments. Many developers have tried to use the transaction scripting language to take advantage of the security and resilience of the system for applications such as digital notary services. Early attempts to use Bitcoin’s script language for these purposes involved creating transaction outputs that recorded data on the blockchain; for exam‐ ple, to record a commitment to a file in such a way that anyone could establish proof-of-existence of that file on a specific date by reference to that transaction.
-
- -->
-
-<!-- 
-
-### What is Bitcoin?
-
-- Diferent from Ethereum, Bitcoin does not have smart contracts, so instead of creating a contract, it's need to discover how to make this type of nft in Bitcoin.
-- Explain transactions,
-- Explain Scripts,
-- Explain Blockchain,
-- What are the properties wanted from Bitcoin?
-
-## Name Tokens Protocol
-
-- Principles of the Name Tokens Protocol
-- What is the Name Tokens Protocol?
-- Why not place the records in the Bitcoin blockchain?
-- An off chain solution.  
-
-### What is Nostr?
-
-- What are the properties wanted from Nostr?
-- What are the properties wanted from Nostr
 
 ### DNS-Nostr Tokens Protocol
 
+- Why not place the records in the Bitcoin blockchain?
+- Nostr: An off chain solution .  
+- What are the properties wanted from Nostr?
 - How does the DNS-Nostr Tokens Protocol work?
+
+### Solution Implementation
+
 - Full scenario of how the DNS-Nostr Tokens Protocol works.
   - Create a domain;
   - Resolve an dns query.
@@ -756,8 +1050,11 @@ Bitcoin’s distributed and timestamped blockchain has potential uses beyond pay
 
 ## 3. My solution solves the problem?
 <!-- Does DNS becomes more uncensorable? -->
-<!-- Problems with the solution -->
-<!-- You still have to   -->
+<!--
+
+### Problems with the solution DNS server centralization deployment
+
+-->
 
 ## References
 
