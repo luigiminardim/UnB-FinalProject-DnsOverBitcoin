@@ -404,7 +404,7 @@ blockchain ledger; second, the UTXO set that represents ownership; third, the
 transactions that update this state, and finally, the Script language that
 enforces the ownership rules.
 
-### 2.1.1 The Blockchain Ledger and Proof of Work
+#### 2.1.1 The Blockchain Ledger and Proof of Work
 
 The Bitcoin blockchain is a public, ordered, back-linked list of transaction
 blocks. It is often visualized as a vertical stack, where each new block is
@@ -490,7 +490,7 @@ effectively bid to have their transactions included in the next block, forming a
 crucial part of Bitcoin's economic security model that will sustain the network
 even after the block subsidy eventually ends.
 
-### 2.1.2 State and Transactions
+#### 2.1.2 State and Transactions
 
 In Bitcoin, the current state of the blockchain is represented by the Unspent
 Transaction Output (UTXO) set. A UTXO is an amount of bitcoin locked to a
@@ -640,7 +640,7 @@ their physical position in the ledger: their block height (*blockheight*), their
 index within that block (*blockindex*), and their specific output index, forming
 the triplet (*blockheight*, *blockindex*, *vout*).
 
-### 2.1.3 Bitcoin Script: Enforcing Ownership Rules
+#### 2.1.3 Bitcoin Script: Enforcing Ownership Rules
 
 The "lock" on a UTXO is a small program written in Bitcoin's Script language.
 Every UTXO has a locking script (technically known as scriptPubKey) that defines
@@ -816,7 +816,6 @@ OP_IF
   # Additional protocol-specific sections can be added, each preceded by OP_NOP
 OP_ENDIF
 ```
-
 
 <!-- Explain that this locking script has to parts: the name-token envelop and the non-dead-code locking script. Show in the example where would be this non-dead-code locking script -->
 The general structure of the Name-Token inscription is as follows:
@@ -1026,9 +1025,87 @@ input with its corresponding output at the same index, visually representing the
   invalid since there is already a minted "alice" token in previous links of the
   same transaction.
 
-<!--IGNORE IT GEMINI: Should I Talk about Floresta? A full node that keeps track of the UTXO set in contrast of the Bitcoin Core that doesn't have an API to scan? -->
+<!-- Should I Talk about Floresta? A full node that keeps track of the UTXO set in contrast of the Bitcoin Core that doesn't have an API to scan? -->
+
+### 2.3 How does Nostr work?
+
+Given the Name-Tokens protocol, a naive approach to associate domain names with
+DNS records would be to place the binary representation of the records in the
+Name-Token inscription. RFC 1035 [^rfc_1035] itself defines the binary format
+for DNS records, which domain owners could use to create a Name-Token
+inscription like this (using a human-readable format for clarity):
+
+```bash
+OP_FALSE
+OP_IF
+   OP_PUSH "name"
+   OP_PUSH "blog"
+   OP_NOP 
+   OP_PUSH "dns"
+   OP_PUSH "@       IN A     023.192.228.084"
+   OP_PUSH "www     IN A     201.030.129.137"
+   OP_PUSH "mail    IN A     096.007.128.198"
+OP_ENDIF
+# [Non-dead-code locking script follows here, e.g., P2PKH script for spending]
+```
+
+However, this approach has several limitations. First, using the Bitcoin blockchain for extensive data storage unrelated to payments is contentious, increasing the storage burden on all full nodes. Second, adding this much data to a transaction significantly increases its size, raising the transaction fee required to mint and update the Name-Token.
+
+Nostr provides an elegant off-chain solution to this problem. Standing for
+"Notes and Other Stuff Transmitted by Relays," Nostr is a simple, open protocol
+designed to create a global, censorship-resistant social network. It is not a
+peer-to-peer system and does not have its blockchain. Instead, it relies on a
+straightforward client-relay architecture and uses the same public-key
+cryptography model, such as Bitcoin.[^fiatjaf-nostr]
+
+The diagram below illustrates the basic workflow of the Nostr protocol:
+
+```mermaid
+graph
+        ClientA[Follower Client A]
+        Publisher[Publisher Client]
+        ClientB[Follower Client B]
+    
+
+    subgraph Relays[ ]
+        direction TB
+        Relay1[Relay 1]
+        Relay2[Relay 2]
+        Relay3[Relay 3]
+    end
+
+    Publisher -- Signs Event & Publishes --> Relay1;
+    Publisher -- Signs Event & Publishes --> Relay2;
+    ClientA -- Subscribes & Pull events --> Relay1;
+    ClientB -- Subscribes & Pull events --> Relay2;
+    ClientB -- Subscribes & Pull events --> Relay3;
+```
+
+In Nostr, the core components are Clients and Relays:
+
+- **Clients:** These are the applications that users interact with. To publish
+  content, a user's client creates an "event" (e.g., a text note or, in our
+  case, DNS records) and signs it with the user's private key. The public key
+  acts as the user's identity.
+
+- **Relays:** These are simple servers that receive events from clients, store
+  them, and forward them to other subscribed clients. Relays do not communicate
+  with each other.
+
+As shown in the diagram, a user on Client A can publish their signed event to
+any relays they choose, such as Relay 1 and Relay 2. Other users, like the one
+on Client B, can connect to those same relays to fetch the event. This
+architecture provides strong censorship resistance; if a single relay blocks a
+user, the user can publish their event to another. The ability for relays to
+charge fees ensures there will always be a financial incentive for someone,
+somewhere, to host a relay, further strengthening the network's resilience
+against censorship. Since every event is cryptographically signed, its
+authenticity can be verified by anyone, making the data tamper-proof regardless
+of which relay it is retrieved from.
 
 <!-- 
+
+### 2.3 How 
 
 ### DNS-Nostr Tokens Protocol
 
@@ -1106,3 +1183,5 @@ Challenges to Adoption](https://ceur-ws.org/Vol-3791/paper16.pdf)
 [^vitalik_buterin-etherium]: [Vitalik Buterin; Ethereum: A Next-Generation Smart Contract and Decentralized Application Platform](https://ethereum.org/content/whitepaper/whitepaper-pdf/Ethereum_Whitepaper_-_Buterin_2014.pdf)
 
 [^andreas_antonopoulos-mastering_bitcoin]: Andreas M. Antonopoulos & David A. Harding; Mastering Bitcoin
+
+[^fiatjaf-nostr]: [nostr - Notes and Other Stuff Transmitted by Relays](https://fiatjaf.com/nostr.html)
