@@ -396,7 +396,7 @@ virtually any arbitrary state transition function [^vitalik_buterin-etherium].
 On Ethereum, this enables complex, stateful "smart contracts" to manage an
 entire collection of NFTs—dictating their properties, minting rules, and
 ownership transfers within a sophisticated program. On the other hand,
-developers must creatively combine its simpler base components to create a
+developers must creatively combine their simpler base components to create a
 similar system on Bitcoin.
 
 We will explore this from the top down: first, the overall structure of the
@@ -421,7 +421,7 @@ cryptographic hash of the previous block's header. This "previous block hash"
 acts as a pointer, linking each block to its parent. This hash is also a key
 input for calculating the current block's hash. As a result, any alteration to a
 historical block would change its hash, invalidating the "previous block hash"
-pointer in the subsequent block causing a cascading invalidation to the tip of
+pointer in the subsequent block, causing a cascading invalidation to the tip of
 the chain.
 
 The diagram below illustrates this structure, showing how Block 2 contains a
@@ -456,35 +456,35 @@ graph RL
    block_2 -->|Prev Hash| block_1
 ```
 
-This chain reaction is what makes the blockchain's history so difficult to
-change. To successfully alter a past block, an attacker would need to re-do the
-work for that block and all subsequent blocks. Bitcoin's consensus mechanism,
-Proof of Work (PoW), makes this computationally and economically impractical. To
-produce a new valid block, network participants known as "miners" select a set
-of unconfirmed transactions and compete to find a valid hash for the new block's
-header that meets a specific difficulty target. This process involves repeatedly
-hashing the block header with a different random value (called a nonce) until a
-valid solution is found. The network automatically adjusts this difficulty
-target approximately every two weeks to ensure that, on average, a new block is
-added to the chain roughly every 10 minutes.
+This chain reaction makes the blockchain's history so difficult to change. To
+successfully alter a past block, an attacker must redo the work for that block
+and all subsequent blocks. Bitcoin's consensus mechanism, Proof of Work (PoW)
+makes this computationally and economically impractical. To produce a new valid
+block, network participants known as "miners" select a set of unconfirmed
+transactions and compete to find a valid hash for the new block's header that
+meets a specific difficulty target. This process involves repeatedly hashing the
+block header with a different random value (called a nonce) until a valid
+solution is found. The network automatically adjusts this difficulty target
+approximately every two weeks to ensure that, on average, a new block is added
+to the chain roughly every 10 minutes.
 
 The existence of a long chain of blocks, each secured by this intensive work,
 proves that the history of transactions is authentic and cannot be changed
-without re-expending an infeasible amount of energy. To incentivize this
-computationally expensive work, miners receive a reward. The first transaction
-in any block is a special coinbase transaction, created by the miner, which
-serves two purposes: it mints entirely new bitcoins (the "block subsidy") and
-collects the fees from all other transactions included in the block. The block
-subsidy is a fixed amount that diminishes over time, halving approximately every
-four years (or 210,000 blocks) to control the currency's supply, ensuring a
-maximum of 21 million bitcoins will ever exist.
+without re-expending an infeasible amount of energy. Miners receive a reward to
+incentivize this computationally expensive work. The first transaction in any
+block is a special coinbase transaction, created by the miner, which serves two
+purposes: it mints entirely new bitcoins (the "block subsidy") and collects the
+fees from all other transactions included in the block. The block subsidy is a
+fixed amount that diminishes over time, halving approximately every four years
+(or 210,000 blocks) to control the currency's supply, ensuring a maximum of 21
+million bitcoins will ever exist.
 
 This system creates a market for block space. Each Bitcoin block is limited in
 the amount of data it can contain, currently capped at 4 million weight units (a
 modern measurement that replaced the simple byte count). Because space in each
 new block is scarce, users who want to ensure their transactions are confirmed
-quickly must include a transaction fee. Miners, who are economically rational,
-will prioritize transactions with higher fees to maximize their reward from the
+quickly must include a transaction fee. Economically rational miners will
+prioritize transactions with higher fees to maximize their reward from the
 coinbase transaction. This creates a competitive fee market where users
 effectively bid to have their transactions included in the next block, forming a
 crucial part of Bitcoin's economic security model that will sustain the network
@@ -493,10 +493,10 @@ even after the block subsidy eventually ends.
 #### 2.1.2 State and Transactions
 
 In Bitcoin, the current state of the blockchain is represented by the Unspent
-Transaction Output (UTXO) set. A UTXO is an amount of bitcoin locked to a
-specific owner with the power to spend it. Think of the UTXO set as a global,
-public ledger of all spendable bitcoin chunks currently in existence. Possessing
-a particular UTXO, usually locked by a private key, constitutes ownership in the
+Transaction Output (UTXO) set. A UTXO is a bitcoin amount locked to a specific
+owner with the power to spend it. Think of the UTXO set as a global, public
+ledger of all spendable bitcoin chunks currently in existence. Possessing a
+particular UTXO, usually locked by a private key, constitutes ownership in the
 Bitcoin network[^andreas_antonopoulos-mastering_bitcoin].
 
 To transfer ownership of bitcoins in the network, users create transactions,
@@ -514,8 +514,8 @@ The following diagram illustrates a single transaction. It consumes two existing
 UTXOs (worth 5 BTC and 3 BTC) for a total input value of 8 BTC. It then creates
 two new UTXOs as outputs: one for 6 BTC and another for 1 BTC. The total output
 value is 7 BTC. The 1 BTC difference between the inputs and outputs is not lost;
-it is the transaction fee claimed by the miner who includes this transaction in
-a block.
+The miner who includes this transaction in a block can claim the transaction
+fee.
 
 ```mermaid
 graph LR
@@ -551,12 +551,12 @@ This process forms a continuous "transaction chain," where the outputs of one
 transaction become the potential inputs for a future transaction. Each
 transaction must contain a digital signature that proves ownership of the inputs
 being spent, which any node on the network can independently
-validate[^andreas_antonopoulos-mastering_bitcoin]. The diagram below shows
-this chain of dependency: an initial 60 BTC UTXO is spent in Transaction 0,
-which creates two new outputs. The first output (10 BTC) is later consumed as
-the input for Transaction 1, which in turn creates a 9 BTC output that becomes
-the input for Transaction 2. This demonstrates how value flows from one
-transaction to the next over time.
+validate[^andreas_antonopoulos-mastering_bitcoin]. The diagram below shows this
+chain of dependency: an initial 60 BTC UTXO is spent in Transaction 0, which
+creates two new outputs. The first output (10 BTC) is later consumed as the
+input for Transaction 1, creating a 9 BTC output that becomes the input for
+Transaction 2. This demonstrates how value flows from one transaction to the
+next over time.
 
 ```mermaid
 graph LR
@@ -613,32 +613,32 @@ graph LR
 
 A transaction is only considered final once it has been included in a valid
 block and added to the blockchain. This is known as transaction confirmation.
-The order in which transactions officially affect the ledger is strictly
-determined by their position in the blockchain. This order is defined first by
-the height of the block they are in, and then by their specific index (their
+Their position in the blockchain strictly determines the order in which
+transactions officially affect the ledger. This order is defined first by the
+height of the block they are in, and then by their specific index (their
 position) within that block. This ensures that every node in the network
-processes the history of state changes in the exact same sequence.
+processes the history of state changes in the same sequence.
 
 The transaction fee is a crucial element for getting a transaction confirmed. It
 is calculated implicitly as the sum of a transaction's inputs minus the sum of
-its outputs. As miners are incentivized to maximize their profit, they
+its outputs. Miners are incentivized to maximize their profit, so they
 prioritize transactions that offer a higher fee relative to their size. This
 means users must be mindful of their transaction's size, as a larger transaction
 generally requires a higher total fee to be competitive. The primary factors
 affecting transaction size are the number of inputs (which typically contribute
-the most to the size), the number of outputs, and the complexity of the Script
-code within them.
+the most), the number of outputs, and the complexity of the Script code within
+them.
 
 As can be seen, every UTXO has a permanent and unique position on the blockchain
 that allows it to be precisely identified. This position is defined by the
 combination of the transaction ID (*txid*) of the transaction that created it
 and its output index within that transaction's list of outputs (often denoted as
 vout, starting from 0). This (*txid*, *vout*) pair is a unique pointer to a
-specific spendable output in the entire history of the blockchain.
-Alternatively, once a transaction is confirmed, its UTXOs can also be located by
-their physical position in the ledger: their block height (*blockheight*), their
-index within that block (*blockindex*), and their specific output index, forming
-the triplet (*blockheight*, *blockindex*, *vout*).
+specific spendable output in the entire blockchain history. Alternatively, once
+a transaction is confirmed, its UTXOs can also be located by their physical
+position in the ledger: their block height (*blockheight*), their index within
+that block (*blockindex*), and their specific output index, forming the triplet
+(*blockheight*, *blockindex*, *vout*).
 
 #### 2.1.3 Bitcoin Script: Enforcing Ownership Rules
 
@@ -651,15 +651,15 @@ satisfies these conditions.
 Bitcoin's scripting language, `Script`, is purposefully non-Turing-complete. It
 lacks loops and complex state-handling capabilities, making it more predictable,
 secure, and less prone to complex bugs. Consequently, creating an NFT-like
-system on Bitcoin is more challenging. It is impossible to deploy a single,
-all-encompassing contract to manage a domain registry. Instead, the desired
+system on Bitcoin is more challenging. Deploying a single, all-encompassing
+contract to manage a domain registry is impossible. Instead, the desired
 functionality must be built by combining Bitcoin's simpler base
 components—transactions and UTXOs—in clever ways to represent the state and
 ownership of unique digital assets.
 
 The Bitcoin Script is a stack-based language. Operations are executed
 sequentially, pushing data onto and popping data off a data structure called a
-stack. A common legacy script known as "Pay-to-Public-Key-Hash" (P2PKH) locks a
+stack. A typical legacy script known as "Pay-to-Public-Key-Hash" (P2PKH) locks a
 UTXO to the hash of a public key. The locking script looks like this:
 
 ```bash
@@ -695,7 +695,7 @@ Let's walk through the P2PKH validation step-by-step:
    - **OP_EQUALVERIFY:** Pops the top two items (the two public key hashes) and
      compares them. If they are not equal, the script fails immediately. If they
      are equal, they are simply removed, and execution continues. This verifies
-     the provided public key matches the one required by the lock.
+     that the provided public key matches the one required by the lock.
    - **OP_CHECKSIG:** Pops the final two items (`PUBLIC_KEY` and `SIGANTURE`).
      It verifies that the signature is valid for this transaction using the
      provided public key. If it is valid, it pushes TRUE onto the stack.
@@ -708,55 +708,54 @@ and mathematically verifies that the signature could only have been created by
 the owner of the corresponding private key for this specific transaction. This
 process proves that the spender is the legitimate owner of the UTXO without
 their private key ever being exposed on the network, thus securely authorizing
-the transfer of value. The deterministic and simple nature of Script ensures
-that every node on the network can independently and reliably come to the same
-conclusion about a transaction's validity.
+the transfer of value. The deterministic and straightforward nature of Script
+ensures that every node on the network can independently and reliably come to
+the same conclusion about a transaction's validity.
 
 ### 2.2 Name-Token Protocol
 
 One of the primary challenges of tokenizing assets on Bitcoin is establishing a
 stable identifier. Bitcoin's architecture is based on Unspent Transaction
 Outputs (UTXOs), which are consumed and destroyed every time they are spent.
-This transient nature makes it difficult to create a persistent digital token
-that can be reliably tracked, updated, and revoked without a specialized
-protocol.
+This transient nature makes creating a persistent digital token that can be
+reliably tracked, updated, and revoked without a specialized protocol
+challenging.
 
-To solve this, this project introduces Name-Token, a novel protocol designed
-specifically to manage unique names and associate them with arbitrary data
-directly on the Bitcoin blockchain. The protocol treats each unique name as a
-distinct digital asset, represented by a single UTXO. The ownership and history
-of these Name-Tokens are immutably recorded, providing the stable, verifiable
-identifier that is otherwise difficult to achieve.
+To solve this, this project introduces Name-Token, a novel protocol designed to
+manage unique names and associate them with arbitrary data directly on the
+Bitcoin blockchain. The protocol treats each unique name as a distinct digital
+asset, represented by a single UTXO. The ownership and history of these
+Name-Tokens are immutably recorded, providing the stable, verifiable identifier
+that is otherwise difficult to achieve.
 
-The creation, management, and validity of Name-Tokens are governed by a concise
-set of principles. These rules ensure uniqueness and create a predictable
-lifecycle for each named asset by leveraging the inherent structure of Bitcoin
+A concise set of principles governs the creation, management, and validity of
+name tokens. These rules ensure uniqueness and create a predictable lifecycle
+for each named asset by leveraging the inherent structure of Bitcoin
 transactions.
 
 1. **Unique Representation:** Each unique Name-Token is represented by a single,
-   distinct Unspent Transaction Output (UTXO). The token's existence and state
-   are embodied by this UTXO.
-2. **Inscribed Metadata:** All relevant data for a Name-Token, including its
-   label and associated parameters, are permanently inscribed within the
-   blockchain.
+   distinct Unspent Transaction Output (UTXO), which embodies the token's
+   existence and state.
+2. **Inscribed Metadata:** The blockchain permanently inscribes all relevant
+   data for a Name Token, including its label and associated parameters.
 3. **State Verification via UTXO Scan:** The current set of all valid Name-Tokens is
    determined by scanning the Bitcoin UTXO set for outputs that conform to the
    protocol's specified inscription format.
-4. **First-is-Root Uniqueness:** For any given label, only one Name-Token can be
-   valid at a time. The "First-is-Root" rule dictates that the chronologically
-   first-minted (earliest confirmed) token for a label is the only valid one.
-   Any subsequent attempt to mint a token with the same label is invalid unless
-   all older, valid tokens with that label have first been revoked.
+4. **First-is-Root Uniqueness:** Only one Name-Token can be valid at a time for
+   any given label. The "First-is-Root" rule dictates that a label's
+   chronologically first-minted (earliest confirmed) token is the only valid
+   one. Any subsequent attempt to mint a token with the same label is invalid
+   unless all older, valid tokens with that label have first been revoked.
 5. **Continuity via Same-Index Chain:** The history and continuity of a
-   Name-Token are maintained across transactions via a positional link. To
+   Name-Tokens are maintained across transactions via a positional link. To
    update a token, its UTXO must be spent as an input, and a new UTXO with an
    updated inscription must be created in the output of the same transaction and
    at the same index.
 
-To fully define the protocol, it's essential to elaborate on the technical
-specifications and implications of each of these core principles. The following
-subsections detail how each rule is implemented and how they work together to
-create a robust system for managing names on the Bitcoin blockchain.
+To fully define the protocol, it's essential to elaborate on each core
+principle's technical specifications and implications. The following subsections
+detail how each rule is implemented and how they work together to create a
+robust system for managing names on the Bitcoin blockchain.
 
 #### 2.2.1 Unique Representation
 
@@ -764,9 +763,9 @@ The fundamental design choice of the Name-Token protocol is to embody the
 token's entire existence and state within a single, distinct Unspent Transaction
 Output (UTXO). This approach ensures that each name is uniquely identifiable and
 can be independently updated, transferred, or revoked without ambiguity. This
-makes ownership unequivocal: control over the private key that can spend the
-UTXO constitutes control over the Name-Token. This UTXO serves as the
-definitive, on-chain proof of ownership and the current state of the name.
+makes ownership unequivocal: controlling the private key that can spend the UTXO
+constitutes control over the Name-Token. This UTXO serves as the definitive,
+on-chain proof of ownership and the current state of the name.
 
 #### 2.2.2 Inscribed Metadata
 
@@ -776,18 +775,18 @@ early innovators embedding data within transaction outputs to harness the
 network's unparalleled security for diverse applications like digital notary
 services.
 
-While various methods have emerged over time, a common approach for embedding
-data involves an OP_RETURN output. This opcode creates a provably unspendable
-output designed solely to hold arbitrary data. However, the Name-Token protocol
-employs a more sophisticated "envelope" technique, leveraging `OP_FALSE`, `OP_IF`,
-and `OP_ENDIF` opcodes. This specific structure enables the inscription of
-metadata directly into the locking script of a standard, spendable transaction
-output. The critical innovation here is that because the data is encapsulated
-within an `OP_IF` block that is preceded by `OP_FALSE`, the enclosed opcodes are
-never executed. Standard Bitcoin nodes, therefore, treat the script as valid but
-ignore its encapsulated content, maintaining full compatibility with the
-network. Conversely, Name-Token-aware software can readily parse and interpret
-this embedded data.
+While various methods have emerged, a common approach for embedding data
+involves an OP_RETURN output. This opcode creates a provably unspendable output
+designed solely to hold arbitrary data. However, the Name-Token protocol employs
+a more sophisticated "envelope" technique, leveraging `OP_FALSE`, `OP_IF`, and
+`OP_ENDIF` opcodes. This specific structure enables the inscription of metadata
+directly into the locking script of a standard, spendable transaction output.
+The critical innovation here is that the enclosed opcodes are never executed
+because the data is encapsulated within an `OP_IF` block preceded by `OP_FALSE`.
+Standard Bitcoin nodes, therefore, treat the script as valid but ignore its
+encapsulated content, maintaining full compatibility with the network.
+Conversely, Name-Token-aware software can readily parse and interpret this
+embedded data.
 
 This ingenious envelope effectively splits the locking script into two conceptual parts:
 
@@ -799,7 +798,7 @@ This ingenious envelope effectively splits the locking script into two conceptua
    For instance, it could be a simple Pay-to-Public-Key-Hash (P2PKH) script
    requiring a signature from the owner's private key. The presence of the
    Name-Token inscription does not prevent the UTXO from being spent; it merely
-   adds metadata to it.
+   adds metadata.
 
 The general structure of the Name-Token inscription within the locking script is
 as follows:
@@ -817,7 +816,6 @@ OP_IF
 OP_ENDIF
 ```
 
-<!-- Explain that this locking script has to parts: the name-token envelop and the non-dead-code locking script. Show in the example where would be this non-dead-code locking script -->
 The general structure of the Name-Token inscription is as follows:
 
 ```bash
@@ -839,14 +837,14 @@ purpose, designed for extensibility and multi-protocol support. The initial
 `OP_PUSH` "name" acts as a magic number or protocol identifier, signaling that
 the subsequent data should be interpreted according to the Name-Token
 specification. The `$label` defines the specific name of the Name-Token,
-providing the actual naming component. The `OP_NOP` acts as a crucial separator,
-allowing the protocol to delineate distinct sections of metadata. This
-separation is particularly powerful for accommodating multiple protocols; the
+providing the actual naming component. The `OP_NOP` is a crucial separator,
+allowing the protocol to delineate distinct metadata sections. This separation
+is particularly powerful for accommodating multiple protocols; the
 `$section_protocol` identifier, followed by its `$argument_0` and potentially
-more arguments, specifies how the following data should be interpreted by
-different applications built on top of Name-Tokens. This modular design ensures
-that the same underlying Name-Token UTXO can carry different types of metadata,
-relevant to various decentralized applications, without breaking compatibility.
+more arguments, specifies how different applications built on top of Name-Tokens
+should interpret the following data. This modular design ensures that the same
+underlying Name-Token UTXO can carry different types of metadata, relevant to
+various decentralized applications, without breaking compatibility.
 
 For a Name-Token UTXO with this inscription to be spent, an unlocking script
 must be provided that satisfies the non-dead-code locking script portion that
@@ -865,68 +863,65 @@ OP_PUSH $PUBLIC_KEY         # The public key corresponding to the private key th
 
 The complete, current state of all Name-Tokens can be derived directly from
 Bitcoin's live UTXO set. This is a powerful feature, as it means the protocol's
-state is part of Bitcoin's own state, simplifing search of Name-Tokens in
-blockchain. An application finds the data associated with a name simply by
+state is part of Bitcoin's own state, simplifying the search for Name-Tokens in
+the blockchain. An application finds the data associated with a name simply by
 finding its corresponding UTXO.
 
 It is critical to note that not all UTXOs are Name-Tokens. To identify a
 Name-Token, a client or indexer must scan the UTXO set and filter for only those
 outputs whose locking scripts contain a valid inscription that conforms to the
-protocol's `OP_FALSE OP_IF...OP_ENDIF` structure. Any UTXO that does not match
-this format is ignored by the protocol.
+protocol's `OP_FALSE OP_IF... OP_ENDIF` structure. The protocol ignores any UTXO
+that does not match this format.
 
 #### 2.2.4 First-is-Root Uniqueness
 
-This fundamental principle dictates that while multiple Name-Tokens for a given
-label may exist, only one can be considered the valid, authoritative token at
-any given time. The valid token is unequivocally the one that was minted
-earliest chronologically, meaning it was confirmed at the lowest (earliest)
-block height. For instance, if Alice mints a Name-Token for "blog" in block
-800,000, and Bob subsequently attempts to mint a Name-Token for "blog" in block
-800,100, only Alice's token is recognized as valid. Bob's token, despite being
-on the blockchain, is considered an invalid mint attempt under this rule.
+This principle dictates that while multiple Name-Tokens for a given label may
+exist, only one can be considered the valid, authoritative token at any given
+time. The valid token is unequivocally the one that was minted at the earliest
+chronological time, meaning it was confirmed at the lowest (earliest) block
+height. For instance, if Alice mints a Name-Token for "blog" in block 800,000,
+and Bob subsequently attempts to mint a Name-Token for "blog" in block 800,100,
+only Alice's token is recognized as valid. Despite being on the blockchain,
+Bob's token is considered an invalid mint attempt under this rule.
 
 Crucially, the "First-is-Root" rule introduces a notion of age or seniority to
 Name-Tokens. Older, earlier-minted tokens take precedence over newer ones. Bob's
-otherwise invalid "blog" token could only become valid if Alice's token, along
-with any other "blog" tokens minted between block 800,000 and 800,100, were
-first explicitly revoked or spent. This ensures a clear, unambiguous, and
-unforgeable ownership hierarchy, directly leveraging the Bitcoin blockchain's
-immutable timestamping and ordered nature to establish global uniqueness for
-each Name-Token label.
+otherwise invalid "blog" token could only become valid if Alice's token and any
+other "blog" tokens minted between block 800,000 and 800,100 were first
+explicitly revoked or spent. This ensures a clear, unambiguous, and unforgeable
+ownership hierarchy, leveraging the Bitcoin blockchain's immutable timestamping
+and ordered nature to establish global uniqueness for each Name-Token label.
 
 #### 2.2.5 Continuity via Same-Index Chain
 
-The Name-Token protocol ensures a stable and auditable history for each token by
+The Name-Token protocol ensures each token's stable and auditable history by
 enforcing a "same-index chain" or "input/output chain" rule. This mechanism
 creates a robust positional link between an input and its corresponding output
 within a transaction, allowing the token's lifecycle to be transparently tracked
 across the Bitcoin blockchain.
 
-<!-- TODO: show that this principle strongly correlates with the transaction chain -->
-
-With this principles, to update a token's data or transfer its ownership, the
-current UTXO must be spent as an input in a new transaction. A new UTXO
-containing the updated inscription must be created in an output at the exact
-same index. For example, if a token's UTXO is spent as the second input
-(input[1]), the updated token must be inscribed in the second output
-(output[1]). This same-index rule is the stable identifier that links a token's
-state across multiple transactions. A transfer is simply an update where the new
-output is locked to a new owner's key.
+With these principles, the current UTXO must be used as input in a new
+transaction to update a token's data or transfer ownership. A new UTXO
+containing the updated inscription must be created in an output at the same
+index. For example, if a token's UTXO is spent as the second input (input[1]),
+the updated token must be inscribed in the second output (output[1]). This
+same-index rule is the stable identifier that links a token's state across
+multiple transactions. A transfer is simply an update where the new output is
+locked to a new owner's key.
 
 This principle strongly correlates with the fundamental concept of the Bitcoin
 transaction chain, where the output of one transaction becomes the input of a
 subsequent one. The Name-Token protocol extends this by adding a crucial
 positional constraint. To update a token's inscribed data or transfer its
-ownership, the current Name-Token UTXO must be spent as an input in a new
-transaction. Crucially, a new UTXO containing the updated inscription must then
-be created in an output at the exact same index as the consumed input. For
-example, if a token's UTXO is consumed as the second input (at input[1]), the
-updated token must be inscribed in the second output (at output[1]) of the new
-transaction. This "same-index" rule acts as the stable identifier, consistently
-linking a token's state across an indefinite number of transactions. A transfer
-of ownership is simply a specific type of update where the new output is locked
-to a new owner's public key.
+ownership, the current Name-Token UTXO must be used as input in a new
+transaction. Crucially, a new UTXO containing the updated inscription must be
+created in an output at the same index as the consumed input. For example, if a
+token's UTXO is consumed as the second input (at input[1]), the updated token
+must be inscribed in the second output (at output[1]) of the new transaction.
+This "same-index" rule acts as the stable identifier, consistently linking a
+token's state across an indefinite number of transactions. A transfer of
+ownership is simply a specific type of update where the new output is locked to
+a new owner's public key.
 
 Given that the principle of **State Verification via UTXO Scan** dictates that
 only the latest valid Name-Token inscription present in the UTXO set is
@@ -993,12 +988,12 @@ graph TB
    output5 --> alice2(("'alice' <br> _mint_"))
 ```
 
-In this diagram, the central Transaction box represents a single Bitcoin
+The central transaction box in this diagram represents a single Bitcoin
 transaction with multiple inputs and outputs. Each link conceptually groups an
 input with its corresponding output at the same index, visually representing the
 "same-index chain" rule. Breaking down the example:
 
-- **Link 0 (Standard Bitcoin Transfer):** a standard Pay-to-Public-Key-Hash UTXO
+- **Link 0 (Standard Bitcoin Transfer):** A standard Pay-to-Public-Key-Hash UTXO
   is consumed as Input 0, and a new P2PKH UTXO is created as Output 0. This
   represents a typical Bitcoin transfer with no Name-Token involved at this
   index.
@@ -1139,13 +1134,13 @@ OP_ENDIF
 For a Name-Token to be considered a valid DNS-Nostr Token, it must adhere to
 specific rules to ensure compatibility with the global DNS system:
 
-1. `Label Compliance`: The label must follow the DNS naming rules outlined in
+1. **Label Compliance:** The label must follow the DNS naming rules outlined in
    RFC-1034. Specifically, it must start with a letter, not end with a hyphen,
    consist only of lowercase letters (a-z), digits (0-9), and hyphens, and be no
    more than 63 characters long. The lowercase requirement ensures consistency,
    as DNS is case-insensitive.
-2. The `$nostr_public_key` field must contain a correctly formatted, parsable
-   Nostr public key as defined in NIP-01[^nostr-nip_01].
+2. **Valid Public Key:** The `$nostr_public_key` field must contain a correctly
+   formatted, parsable Nostr public key as defined in NIP-01[^nostr-nip_01].
 
 A token could be a valid Name-Token in general, but will be considered an
 invalid DNS-Nostr Token if it fails either of these checks.
