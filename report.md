@@ -1049,7 +1049,11 @@ OP_ENDIF
 # [Non-dead-code locking script follows here, e.g., P2PKH script for spending]
 ```
 
-However, this approach has several limitations. First, using the Bitcoin blockchain for extensive data storage unrelated to payments is contentious, increasing the storage burden on all full nodes. Second, adding this much data to a transaction significantly increases its size, raising the transaction fee required to mint and update the Name-Token.
+However, this approach has several limitations. First, using the Bitcoin
+blockchain for extensive data storage unrelated to payments is contentious,
+increasing the storage burden on all full nodes. Second, adding this much data
+to a transaction significantly increases its size, raising the transaction fee
+required to mint and update the Name-Token.
 
 Nostr provides an elegant off-chain solution to this problem. Standing for
 "Notes and Other Stuff Transmitted by Relays," Nostr is a simple, open protocol
@@ -1103,16 +1107,57 @@ against censorship. Since every event is cryptographically signed, its
 authenticity can be verified by anyone, making the data tamper-proof regardless
 of which relay it is retrieved from.
 
+### 2.4 DNS-Nostr-Token Protocol
+
+The DNS-Nostr-Token Protocol is a specific application built upon the general
+Name-Token framework. It defines a dedicated section within the Name-Token
+inscription to link a domain name directly to DNS records stored on the Nostr
+network. This approach separates the on-chain proof of ownership from the
+off-chain, easily updatable DNS data.
+
+The core mechanism is straightforward: the protocol maps a registered label (the
+domain name) to a specific Nostr public key. This key is then used to query
+Nostr relays the latest text note published by its owner. The content of this
+Nostr note is expected to be a standard DNS master file, containing all the
+relevant DNS records (A, AAAA, MX, TXT, etc.) for that domain.
+
+A UTXO inscribed according to this specification is referred to as a DNS-Nostr
+Token. The inscription uses "dns-nostr" for the `$section_protocol` field, and the
+first argument (`$argument_0`) is the associated Nostr public key.
+
+```bash
+OP_FALSE
+OP_IF
+  OP_PUSH "name"
+  OP_PUSH $label            # A valid, lowercase DNS label
+  OP_NOP
+  OP_PUSH "dns-nostr"
+  OP_PUSH $nostr_public_key   # The key for publishing DNS records on Nostr
+OP_ENDIF
+```
+
+For a Name-Token to be considered a valid DNS-Nostr Token, it must adhere to
+specific rules to ensure compatibility with the global DNS system:
+
+1. `Label Compliance`: The label must follow the DNS naming rules outlined in
+   RFC-1034. Specifically, it must start with a letter, not end with a hyphen,
+   consist only of lowercase letters (a-z), digits (0-9), and hyphens, and be no
+   more than 63 characters long. The lowercase requirement ensures consistency,
+   as DNS is case-insensitive.
+2. The `$nostr_public_key` field must contain a correctly formatted, parsable
+   Nostr public key as defined in NIP-01[^nostr-nip_01].
+
+A token could be a valid Name-Token in general, but will be considered an
+invalid DNS-Nostr Token if it fails either of these checks.
+
+It is also important to note that the DNS records may differ across various
+Nostr relays. The protocol designates the owner of the DNS-Nostr Token as solely
+responsible for publishing their DNS master file to the relays and ensuring the
+records are kept up-to-date.
+
 <!-- 
 
-### 2.3 How 
-
-### DNS-Nostr Tokens Protocol
-
-- Why not place the records in the Bitcoin blockchain?
-- Nostr: An off chain solution .  
-- What are the properties wanted from Nostr?
-- How does the DNS-Nostr Tokens Protocol work?
+### 2.3 How
 
 ### Solution Implementation
 
@@ -1185,3 +1230,5 @@ Challenges to Adoption](https://ceur-ws.org/Vol-3791/paper16.pdf)
 [^andreas_antonopoulos-mastering_bitcoin]: Andreas M. Antonopoulos & David A. Harding; Mastering Bitcoin
 
 [^fiatjaf-nostr]: [nostr - Notes and Other Stuff Transmitted by Relays](https://fiatjaf.com/nostr.html)
+
+[^nostr-nip_01]: [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md)
