@@ -1150,22 +1150,293 @@ Nostr relays. The protocol designates the owner of the DNS-Nostr Token as solely
 responsible for publishing their DNS master file to the relays and ensuring the
 records are kept up-to-date.
 
-<!-- 
+## 3. System Architecture and Implementation
 
-### 2.3 How
+This section describes the practical implementation of the DNS-Nostr-Token
+protocol. The system's architecture is designed around three primary,
+interoperable components: the DNS-Nostr Wallet, the Name-Token Repository, and
+the DNS-Nostr Server.
 
-### Solution Implementation
+Together, they leverage the security of the Bitcoin network for ownership and
+the flexibility of the Nostr network for data publication. The Wallet acts as
+the user-facing tool, the Repository is the blockchain indexer, and the Server
+provides the public-facing resolution service.
 
-- Full scenario of how the DNS-Nostr Tokens Protocol works.
-  - Create a domain;
-  - Resolve an dns query.
-  - Update records;
-  - Transfer domain ownership;
-  - Revoke a domain;
+The DNS-Nostr Wallet is the user's interface for minting Name-Tokens on the Bitcoin Network and publishing the associated DNS records to Nostr Relays. The Name-Token Repository is a backend service that continuously scans the Bitcoin blockchain to find and validate all Name-Tokens, maintaining a clean, queryable database of the results. The DNS-Nostr Server receives queries from standard DNS Clients. It queries the Repository to find the correct Nostr public key for a given name and then fetches the latest DNS records from Nostr to provide the answer.
 
--->
+The open-source implementation of this system can be found in the project's GitHub repository: [luigiminardim/dns-nostr-tokens](https://github.com/luigiminardim/dns-nostr-tokens).
 
-## 3. My solution solves the problem?
+### 3.1. DNS-Nostr Wallet
+
+The DNS-Nostr Wallet is a client-side application that empowers users to create and manage decentralized domain labels. Its core purpose is to handle the complete lifecycle of Name-Tokens and their DNS-Nostr token inscriptions, beyond standard Bitcoin wallet functions.
+
+The wallet's features provide a comprehensive user experience for both standard Bitcoin operations and the specialized functions of the Name-Token protocol:
+
+- **Standard Bitcoin Functions:** The wallet supports basic operations, including sending and receiving bitcoins.
+- **Name-Token Management:** It handles the full lifecycle of DNS-Nostr Tokens:
+  - **Create:** Mints new tokens on the Bitcoin blockchain to represent subdomain labels.
+  - **Transfer:** Transfers ownership of Name-Tokens to other Bitcoin users.
+  - **Revoke:** Permanently removes a Name-Token from the active set.
+  - **Nostr Integration:** It publishes user-provided DNS records as signed text notes to Nostr relays, using the key linked in the token's inscription.
+
+All token operations involve creating a transaction where the output's locking script (scriptPubKey) is a standard Pay-to-Public-Key-Hash (P2PKH) script prepended with the DNS-Nostr token inscription envelope. This structure ensures the output is a spendable transaction while embedding the necessary protocol data.
+
+<!-- TODO: improve this paragraph -->
+
+```bash
+# Inscription Envelope
+OP_FALSE
+OP_IF
+  OP_PUSH "name"
+  OP_PUSH $label
+  OP_NOP
+  OP_PUSH "dns-nostr"
+  OP_PUSH $nostr_public_key
+OP_ENDIF
+# Standard P2PKH Locking Script
+OP_DUP
+OP_HASH160
+OP_PUSH $public_key_hash
+OP_EQUALVERIFY
+OP_CHECKSIG
+```
+
+#### 3.1.1 Key Management
+
+The wallet employs a segregated key management scheme to prevent users from accidentally spending valuable Name-Tokens using two different BIP derivation paths.
+
+- **Standard UTXOs:** The Wallet uses the BIP 84[^bip_84] path (m/84'/...) for regular funds used for transaction fees and payments. This generates P2WPKH (Native SegWit) addresses, ensuring efficiency and compatibility.
+- **Name-Token UTXOs:** To manage the tokens themselves, the wallet uses a custom path based on BIP 44[^bip_44] (m/44'/...), which generates P2PKH addresses suitable for inscriptions. The key innovation is at the change level of the path. Instead of using the standard 0 (receiving) or 1 (change), it uses a value derived from the ASCII representation of the word "name" (1851878757 in decimal). This makes the Name-Token UTXOs invisible to standard wallets that do not scan this custom path, providing robust protection. Within this custom path, the key at index=0 is reserved exclusively for generating the user's Nostr key pair, while the on-chain Name-Tokens begin deriving from index=1 onwards.
+
+The following table summarizes, with examples, the key paths used by the wallet:
+
+| coin    | account | chain      | address   | path                     |
+| ------- | ------- | ---------- | --------- | ------------------------ |
+| Bitcoin | first   | external   | first     | m/84'/0'/0'/0/0          |
+| Bitcoin | first   | external   | second    | m/84'/0'/0'/0/1          |
+| Bitcoin | first   | change     | first     | m/84'/0'/0'/1/0          |
+| Bitcoin | first   | Name-Token | Nostr Key | m/44'/0'/0'/1851878757/0 |
+| Bitcoin | first   | Name-Token | first     | m/44'/0'/0'/1851878757/1 |
+
+
+#### 3.1.2 Token Creation
+
+To mint a new DNS-Nostr Token, the wallet constructs and broadcasts a Bitcoin transaction that links a chosen label to a Nostr public key. The wallet selects one or more standard UTXOs with a total value sufficient to pay the transaction fee and the dust limit for the new token output. The transaction's first output is the P2PKH Name-Token containing the full DNS-Nostr token inscription. A second output is typically created to send the remaining bitcoins back to the user's wallet as change.
+
+After the wallet builds the transaction, it uses the user's selected local file containing their DNS records in the standard master file format, signs it with the appropriate Nostr private key, and publishes it as a text note to user-configured Nostr relays.
+
+#### 3.1.3 Token Transfer
+
+To transfer ownership of a Name-Token, the wallet creates a transaction that spends the token and reassigns it to a new owner.
+
+The first input is the Name-Token UTXO being transferred, and additional standard UTXOs can be added to cover the transaction fee. The first output is a new, same-index P2PKH UTXO locked to the recipient's public key hash. This output contains only a minimal name inscription header, without the "dns-nostr" section. This effectively transfers ownership of the name's "root" while leaving it to the new owner to update with their Nostr key and DNS records. A second change output can be added if necessary.
+
+#### 3.1.4 Token Revocation
+
+Revoking a Name-Token is a straightforward process of spending it without
+creating a replacement. The wallet inputs the Name-Token UTXO and may add other
+UTXOs to cover the fee. The transaction contains no special outputs. The entire
+value of the spent inputs (minus the fee) is sent back to a standard change
+address in the user's wallet. Because no new Name-Token is created at the same
+index, the token is effectively burned and removed from the active set.
+
+### 3.2. Name-Token Repository
+
+The Name-Token Repository is a crucial backend component that provides a
+queryable interface for the current state of all valid Name-Tokens. To achieve
+this, it acts as a specialized indexer, continuously monitoring the Bitcoin
+blockchain, validating transactions against the protocol rules, and maintaining
+a local results database.
+
+The repository persists its internal state in a database, which maps each valid label to its current on-chain data, including its UTXO identifier (outpoint) and inscription content. This allows the service to resume its work after a restart without needing to re-scan the entire blockchain from the beginning.
+
+#### 3.2.1. Indexing Process and Fork Resistance
+
+The integrity of the repository's database is paramount. Given that the Bitcoin blockchain operates on a principle of probabilistic finality, the indexing process must be resilient to chain reorganizations (forks). To mitigate the risk of processing data from transient, non-canonical chains, a block is only considered for indexing after it has achieved a minimum confirmation depth, denoted as MIN_NUMBER_CONFIRMATIONS (a typical value is 6). By enforcing this confirmation delay, the algorithm ensures it only operates on blocks that are part of the stable, canonical history of the ledger.
+
+The core of the repository is a state transition indexing algorithm that runs
+periodically (e.g., every 10 minutes) to update its local state based on new,
+confirmed blocks. The indexing algorithm is a background task that runs at a
+fixed interval to process new blocks and update the local database. The process
+is as follows:
+
+1. **Initialization:** Retrieve next blockchain position.
+   `(blockheight, blockindex, inoutindex)` to be processed.
+2. **Verify Confirmation Depth:** Verify if `blockheight` has achieved the
+   minimum number of confirmations. If this condition is not met, the execution
+   cycle terminates and resumes when the block is sufficiently confirmed.
+3. **Fetch Block Data:** Retrieve the block's content at `blockheight`.
+4. **Process State Transitions:** For each input/output link in each block
+   transaction, apply the Name-Token rules to determine if a token is being
+   minted, updated, or revoked. Then, commit all resulting database changes in a
+   single atomic transaction, which includes:
+   - Insert a new record for any minted token.
+   - Update the record for any updated token.
+   - Delete the record for any revoked token.
+   - Update the scan position pointer to the following input/output link.
+5. **Checkpoint Block Completion:** Save the next `blockheight` as the starting
+   position.
+6. **Loop:** Repeat the entire process, starting from Step 1, to process the
+   next block.
+
+The atomicity of the database operations in Step 4 is critical for ensuring data
+consistency. The repository guarantees a consistent state by committing all
+state changes (inserts, updates, deletes) and advancing the scan position
+pointer together in a single, indivisible transaction. This prevents fault
+scenarios, such as a crash after the data is updated but before the position is
+saved, which could lead to incorrect reprocessing or data loss upon restart.
+
+The Block Checkpointing in Step 5 serves as a valuable performance optimization. While the atomic updates in Step 4 ensure fine-grained recovery, saving a checkpoint after a whole block is processed allows the indexer to resume its work from the start of the next block, rather than reiterating through already-processed transactions within a partially completed block. This significantly speeds up recovery time after a shutdown.
+
+#### 3.2.2. Database Schema
+
+SQLite[^sqlite] was chosen as the underlying database for this implementation.
+The schema is designed to hold both the scanner's state and the indexed set of
+Name-Tokens. The data is organized to allow for efficient lookups and updates.
+
+- Table State:
+  - `block_height`: The height of the block currently being scanned.
+  - `block_index`: The index of the transaction within the block.
+  - `vout_index`: The index of the output within the transaction.
+- Name-Token Set:
+  - `label`: The unique name of the token, stored as a byte string.
+  - `mint_blockheight`: The block height where the token was first created.
+  - `mint_blockindex`: The block index where the token was first created.
+  - `mint_vout`: The vout index where the token was first created.
+  - `last_txid`: The transaction ID (txid) of the token's current UTXO, stored as a byte.
+  - `last_vout`: The vout index of the token's current UTXO.
+  - `inscription_content`: JSON string containing the raw data from the token's
+    inscription, which can include protocol-specific sections and arguments.
+
+To ensure fast queries, the database uses two critical indexes:
+
+- An index on (label, mint_blockheight, mint_blockindex, mint_vout): This allows
+  for quick lookups to find the oldest (and therefore valid) token for a given
+  label, enforcing the "First-is-Root" rule.
+- An index on (last_txid, last_vout): This is essential for the scanning
+  algorithm to rapidly identify which Name-Token is being spent when processing
+  transaction inputs.
+
+### 3.3. The DNS Server
+
+The DNS-Nostr Server is the component that bridges the traditional DNS ecosystem
+with the decentralized ownership records on the Bitcoin blockchain.
+
+In an idealistic scenario, every computer could run its own Bitcoin node and a
+background instance of the Name-Token Repository, allowing each machine to
+resolve names by itself in a truly peer-to-peer fashion. However, the system is
+designed to integrate seamlessly with the current DNS hierarchy to ensure
+widespread adoption and compatibility. This is achieved by allowing independent
+domain owners to deploy the DNS-Nostr Server as an authoritative server for a
+specific subdomain.
+
+This model follows a principle similar to Nostr's decentralization: just as
+anyone can run a Nostr relay, any domain owner can run a DNS-Nostr Server. This
+fosters a resilient network of independent resolvers rather than relying on a
+single central entity.
+
+An operator of an existing domain, such as dns.app, can delegate a subdomain
+like nostr.dns.app to their DNS-Nostr Serve by adding two simple records to
+their primary domain's master file. Assuming the DNS-Nostr server is running at
+IP `164.41.102.70`, the configuration would be:
+
+```dns
+nostr              IN NS   dns-nostr-server.dns.app.
+dns-nostr-server   IN A    164.41.102.70
+```
+
+The NS (Name Server) record delegates all resolution requests for
+`*.nostr.dns.app` to the server named `dns-nostr-server.dns.app`. The A record
+then maps that server name to its IP address. From this point on, any DNS query
+for a subdomain ending in `.nostr.dns.app` will be routed to the DNS-Nostr
+Server for resolution.
+
+The DNS-Nostr Server acts as an authoritative DNS server for its controlled
+subdomains. When it receives a query, it follows a deterministic process to find
+the correct records.
+
+For example, consider a query for the A record of `blog.alice.nostr.dns.app`.
+The server would perform the following steps:
+
+1. **Isolate the Label:** It parses the query and identifies the user-registered
+   label, in this case, `alice`.
+2. **Query the Repository:** It queries its local Name-Token Repository to find
+   the valid Name-Token associated with the label `alice`.
+3. **Extract the Public Key:** If a valid token is found, the associated Nostr
+   public key is extracted from the token's inscription data.
+4. **Fetch from Nostr:** It connects to a set of Nostr relays and requests the
+   most recent text note published by that Nostr public key.
+5. **Parse Records:** It parses the content of the retrieved note, which is
+   expected to be a standard DNS master file, and finds the requested record
+   (e.g., the `A` record for the name `blog`).
+6. **Respond to Client:** It formats the record into a standard DNS response and
+   sends it back to the client that made the initial query.
+
+The server supports all standard DNS record types, including `A`, `AAAA`,
+`CNAME`, `NS`, `MX`, and `TXT`. This entire resolution process is visualized in
+the diagram below.
+
+```mermaid
+sequenceDiagram
+participant C as DNS Client
+participant S as DNS-Nostr Server
+participant R as Name-Token Repo
+participant N as Nostr Relays
+
+C->>S: Query: A record for 'blog.alice.nostr.dns.app'?
+S->>R: Get Name-Token for label 'alice'
+R-->>S: Return Name-Token with Nostr Public Key
+S->>N: Get the latest event from PK
+N-->>S: Return DNS Master File (as a text note)
+S-->>C: Respond with IP Address for 'blog'
+```
+
+### 3.4. System Workflow Diagram
+
+The diagram below illustrates the complete architecture of the system, detailing how the core components interact to facilitate both the creation of names and their subsequent resolution. The entire process involves two distinct workflows: token creation and data publication; DNS resolution.
+
+```mermaid
+graph TB
+    subgraph Bitcoin Network
+        Bitcoin[(Bitcoin Node)]
+    end
+
+    subgraph Nostr Network
+        Nostr[(Nostr Relay)]
+    end
+
+    subgraph System Components
+        Wallet["DNS-Nostr Wallet"]
+        DnsServer["DNS-Nostr Server"]
+        Repository["Name-Token Repository"]
+    end
+
+    Wallet -- "Mints Name-Token" --> Bitcoin
+    Wallet -- "Publishes DNS Records" --> Nostr
+    DnsClient(("DNS Client")) -- "DNS Query" --> DnsServer
+    DnsServer -- "Get Name-Token for Label" --> Repository
+    DnsServer -- "Fetches DNS Records" --> Nostr
+    Repository -- "Scans Blockchain" --> Bitcoin
+```
+
+#### 3.4.1 Token Creation and Data Publication
+
+This workflow describes how a user registers a new name and associates it with DNS data.
+
+1. **Minting the Name-Token:** The user interacts with the DNS-Nostr Wallet to create and broadcast a Bitcoin transaction. This transaction contains a specially formatted inscription that mints a new Name-Token on the Bitcoin Network, permanently linking a chosen label to a Nostr public key.
+2. **Publishing DNS Records:** Using the same wallet, the user signs their DNS records (in a standard master file format) with their Nostr private key and publishes the resulting event to the Nostr Network.
+3. The Name-Token Repository independently scans the Bitcoin blockchain. After the minting transaction is confirmed, the repository discovers the new Name-Token, validates it against the protocol rules, and saves the label and its associated Nostr public key to its local database.
+
+#### 3.4.2 DNS Resolution
+
+This workflow describes how the system resolves an end-user's DNS query.
+
+1. **DNS Query:** A standard DNS Client sends a query for a specific subdomain (e.g., blog.alice.nostr.dns.app) to the DNS-Nostr Server.
+2. **Name Lookup:** The server receives the query and isolates the label ("alice"). It then queries its internal Name-Token Repository to retrieve the Nostr public key associated with that label.
+3. **Data Fetching:** With the Nostr public key, the server queries the Nostr Network to find the latest DNS record event published by that key.
+4. **DNS Response:** The server receives the DNS master file from a Nostr relay, parses it to find the specific record requested (the `A` record for "blog"), and sends the correctly formatted DNS answer back to the DNS Client.
+
+## 4. My solution solves the problem?
 <!-- Does DNS becomes more uncensorable? -->
 <!--
 
@@ -1174,8 +1445,6 @@ records are kept up-to-date.
 -->
 
 ## References
-
-<!-- # Introduction -->
 
 [^cloudflare-what_is_dns]: [Cloudflare; What is DNS? | How DNS works](https://www.cloudflare.com/learning/dns/what-is-dns/)
 
@@ -1203,8 +1472,6 @@ records are kept up-to-date.
 
 [^reason_foundation-x_ban]: [Reason Foundation; How Brazil’s X ban signals growing control over online free speech](https://reason.org/commentary/how-brazils-x-ban-signals-growing-control-over-online-free-speech/)
 
-<!-- ## What is the solution to my problem? -->
-
 [^southampton-blockchain_based_dns]: [Blockchain-based DNS: Current Solutions and
 Challenges to Adoption](https://ceur-ws.org/Vol-3791/paper16.pdf)
 
@@ -1227,3 +1494,9 @@ Challenges to Adoption](https://ceur-ws.org/Vol-3791/paper16.pdf)
 [^fiatjaf-nostr]: [nostr - Notes and Other Stuff Transmitted by Relays](https://fiatjaf.com/nostr.html)
 
 [^nostr-nip_01]: [NIP-01](https://github.com/nostr-protocol/nips/blob/master/01.md)
+
+[^bip_84]: [BIP 84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)
+
+[^bip_44]: [BIP 44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)
+
+[^sqlite]: [SQLite](https://sqlite.org/)
