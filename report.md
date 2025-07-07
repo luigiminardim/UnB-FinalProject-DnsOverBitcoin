@@ -1203,21 +1203,23 @@ OP_CHECKSIG
 
 #### 3.1.1 Key Management
 
-The wallet employs a segregated key management scheme to prevent users from accidentally spending valuable Name-Tokens using two different BIP derivation paths.
+To enhance usability and security, the wallet's key management employs hierarchical deterministic (HD) key derivation, significantly simplifying backup procedures. This means the wallet owner only needs to back up a single master key (represented as "m"), which can often be derived from a memorable word set (like a seed phrase). From this single master key, the wallet can deterministically generate all the other required keys.
 
-- **Standard UTXOs:** The Wallet uses the BIP 84[^bip_84] path (m/84'/...) for regular funds used for transaction fees and payments. This generates P2WPKH (Native SegWit) addresses, ensuring efficiency and compatibility.
-- **Name-Token UTXOs:** To manage the tokens themselves, the wallet uses a custom path based on BIP 44[^bip_44] (m/44'/...), which generates P2PKH addresses suitable for inscriptions. The key innovation is at the change level of the path. Instead of using the standard 0 (receiving) or 1 (change), it uses a value derived from the ASCII representation of the word "name" (1851878757 in decimal). This makes the Name-Token UTXOs invisible to standard wallets that do not scan this custom path, providing robust protection. Within this custom path, the key at index=0 is reserved exclusively for generating the user's Nostr key pair, while the on-chain Name-Tokens begin deriving from index=1 onwards.
+A segregated key management scheme is implemented to prevent accidental spending of valuable Name-Token UTXOs and to keep Nostr key activities distinct from other operations. This separation is achieved by utilizing different derivation paths for each key type.
 
-The following table summarizes, with examples, the key paths used by the wallet:
+- **Standard UTXOs:** For regular Bitcoin funds, typically used for transaction fees and general payments, the wallet adheres to the widely adopted BIP 84[^bip_84] standard. This path generates efficient and compatible addresses with most modern Bitcoin wallets.
+- **Name-Token UTXOs:** The wallet uses a modified BIP 44[^bip_44] path to manage the Name-Tokens. The key innovation here lies in a custom chain of the derivation path, that, instead of standard values, a unique identifier derived from the ASCII representation of the word "name" (0x6E616D65 in hexadecimal) is used. This ingenious customization makes Name-Token UTXOs "invisible" to standard wallets that can't scan this custom path, providing a robust layer of protection against unintentional spending.
+- **Nostr Keys:**  For Nostr keys specifically used to publish DNS records, the wallet utilizes a custom path based on NIP 06[^nip_06]. To further segregate these keys from other Nostr activities, the same "name" ASCII-derived custom value (0x6E616D65 in hexadecimal) is employed at the chain level in the derivation path. To ensure each Name-Token has a unique corresponding Nostr key, the wallet incorporates a truncated hash (double SHA-256 hash of the label, truncated to 31 bits) of the Name-Token's label into the final part of the derivation path. This method avoids hardened derivations, allowing for greater flexibility while maintaining uniqueness.
+  
+The following table summarizes the distinct key derivation paths used by the wallet for each purpose, illustrating how this segregation is achieved:
 
-| coin    | account | chain      | address   | path                     |
-| ------- | ------- | ---------- | --------- | ------------------------ |
-| Bitcoin | first   | external   | first     | m/84'/0'/0'/0/0          |
-| Bitcoin | first   | external   | second    | m/84'/0'/0'/0/1          |
-| Bitcoin | first   | change     | first     | m/84'/0'/0'/1/0          |
-| Bitcoin | first   | Name-Token | Nostr Key | m/44'/0'/0'/1851878757/0 |
-| Bitcoin | first   | Name-Token | first     | m/44'/0'/0'/1851878757/1 |
-
+| Description     | Coin    | Account | Chain      | Address         | Path                                |
+| --------------- | ------- | ------- | ---------- | --------------- | ----------------------------------- |
+| Standart UTXO   | Bitcoin | First   | External   | First           | `m/84'/0'/0'/0/0`                   |
+| Standart UTXO   | Bitcoin | First   | External   | Second          | `m/84'/0'/0'/0/1`                   |
+| Standart UTXO   | Bitcoin | First   | Change     | First           | `m/84'/0'/0'/1/0`                   |
+| Name-Token UTXO | Bitcoin | First   | Name-Token | First           | `m/44'/0'/0'/0x6E616D65/0`          |
+| Nostr Key       | Nostr   | First   | Name-Token | hash31("alice") | `m/44'/0'/0'/0x6E616D65/0xBD306425` |
 
 #### 3.1.2 Token Creation
 
@@ -1437,6 +1439,18 @@ This workflow describes how the system resolves an end-user's DNS query.
 4. **DNS Response:** The server receives the DNS master file from a Nostr relay, parses it to find the specific record requested (the `A` record for "blog"), and sends the correctly formatted DNS answer back to the DNS Client.
 
 ## 4. My solution solves the problem?
+
+Name-Token protocol can, in fact, descentrilize the DNS root zone management and eliminate politicking and censorship from the process of domain name registration. The protocol allows anyone to register a domain name, as long as they have a Bitcoin wallet and a Nostr account. The Name-Token protocol is designed to be compatible with the existing DNS system, so it can be used alongside traditional DNS servers.
+
+Problems:
+
+1. For a trullish descentralized and verifiable DNS system, all dns clients should run a full node, which is unfeasible.
+2. Name-Token token system don't solve the problem of name mint spamming, which bad incentivizes to mint a name even if it will not be used just to seel in the future.
+3. Name-Token system mints are very transparent, which means that it propagates the mint intention of the label over the network even before the transaction is confirmed.
+4. The DNS-Nostr Server is a single point of failure, which can be mitigated by running multiple instances of the server, but it still requires some level of trust in the server operator.
+5. The DNS-Nostr Server relies on Nostr relays to fetch the latest DNS records, but is hard to check to whitch relays the wallet have published the records.
+
+
 <!-- Does DNS becomes more uncensorable? -->
 <!--
 
@@ -1498,5 +1512,7 @@ Challenges to Adoption](https://ceur-ws.org/Vol-3791/paper16.pdf)
 [^bip_84]: [BIP 84](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)
 
 [^bip_44]: [BIP 44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)
+
+[^nip_06]: [NIP-06](https://github.com/nostr-protocol/nips/blob/master/06.md)
 
 [^sqlite]: [SQLite](https://sqlite.org/)
